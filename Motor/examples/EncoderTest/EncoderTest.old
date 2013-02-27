@@ -1,0 +1,224 @@
+#include <ros.h>  // this must come BEFORE any other ros libraries!
+#include <std_msgs/String.h>
+#include <digitalWriteFast.h>  // library for high performance reads and writes by jrraines
+                               // see http://www.arduino.cc/cgi-bin/yabb2/YaBB.pl?num=1267553811/0
+                               // and http://code.google.com/p/digitalwritefast/
+#include <Odometer.h>
+
+// Quadrature encoder
+// left = 0 and right = 1 in the arrays
+// for interrupts, 0 = pin 2, 1 = pin 3
+const short c_encoderInterruptPin[2] = {2, 3};
+const short c_encoderInterrupt[2] = {0, 1};
+const boolean _bIsMotorReversed[2] = {false, true};
+volatile boolean _bLastDigitalValue[2] = {LOW, LOW};
+volatile long _lEncoderTicks[2] = {0, 0};
+
+// L293D motor driver
+const short c_motorEnablePin[2] = {10, 11}; // PWM
+const short c_motorDirectionPin[2][2] = {{8, 9}, {12, 13}};
+boolean bIsMotorRunningForward[2];
+
+// Pins for digitalReadFast must be defined at compile time,
+// so no arrays here
+// Right encoder
+#define c_RightEncoderPinDirection 7
+#define c_RightTriggerPin 3
+// Left encoder
+#define c_LeftEncoderPinDirection 4
+#define c_LeftTriggerPin 2
+
+static boolean debouncing = false;
+long oldRightTicks = -256;
+Odometer *robotOdometer;
+
+void setup() {
+  Serial.begin(57600);
+
+  // disable motors first
+  SetupMotors();
+  
+  // all values in meters
+  double wheelDiameter = 0.06985;
+  double trackWidth = 0.1778;
+  int ticksPerRevolution = 128;
+  
+  float velocityPParam = 0.1;
+  float velocityIParam = 0.1;
+  float turnPParam = 0.4;
+  float turnIParam = 0.5;
+    
+  // in meters: wheel diameter, track width, ticks per revolution, current time
+  // TODO: use ROS for time, and possibly the other parameters
+  robotOdometer = new Odometer(wheelDiameter, trackWidth, ticksPerRevolution, millis());
+  
+  // setup PID parameters
+  // TODO: may use ROS, or not; see drh/ros/ardros/ardros_configuration and ardros.yaml
+  robotOdometer->setPIDValues(velocityPParam, velocityIParam, turnPParam, turnIParam);
+  
+  SetupEncoders();  
+  
+  delay(2000);  
+  Serial.println("half speed");
+  for(int i = 0; i < 2; i++) {
+    setMotorSpeed(i, 0.5);
+  }  
+  delay(2000);
+  Serial.println("backwards");
+  for(int i = 0; i < 2; i++) {
+    setMotorSpeed(i, -1);
+  }  
+  delay(2000);
+  Serial.println("full speed ahead");  
+  // full steam ahead!
+  for(int i = 0; i < 2; i++) {
+    setMotorSpeed(i, 1);
+  }
+}
+
+void loop() {  
+  
+  if(_lEncoderTicks[1] != oldRightTicks) {
+    Serial.print("L : ");
+    Serial.print(_lEncoderTicks[0]);
+
+    Serial.print("  R : ");
+    Serial.println(_lEncoderTicks[1]);
+    
+    oldRightTicks = _lEncoderTicks[1];
+  }  
+  
+  robotOdometer->calculate(_lEncoderTicks[0], _lEncoderTicks[1], millis());
+  // TODO: publish calculated position (odom-like message)
+  
+  // compare our speed to desired velocity, output new voltages
+  
+  // publish sensor data
+  
+  // necessary? Don't want to overflow serial buffer
+  delay(25);
+}
+
+void SetupMotors() {
+  Serial.println("Disabling motors...");  
+  for(int i = 0; i < 2; i++) {
+    pinMode(c_motorEnablePin[i], OUTPUT);
+    analogWrite(c_motorEnablePin[i], 0);
+  }
+  Serial.println("Motors disabled.");
+  
+  for(int i = 0; i < 2; i++) {
+    for(int j = 0; j < 2; j++) {
+      pinMode(c_motorDirectionPin[i][j], OUTPUT);
+      digitalWrite(c_motorDirectionPin[i][j], LOW);
+    }
+    
+    setMotorDirection(i, true);
+  }    
+}
+
+// Set motor spin as forwards or backwards
+void setMotorDirection(int nMotorIndex, boolean bForward) {
+  if(bForward) {
+    digitalWrite(c_motorDirectionPin[nMotorIndex][0], LOW);
+    digitalWrite(c_motorDirectionPin[nMotorIndex][1], HIGH); 
+    bIsMotorRunningForward[nMotorIndex] = true;
+  }
+  else {
+    digitalWrite(c_motorDirectionPin[nMotorIndex][0], HIGH);
+    digitalWrite(c_motorDirectionPin[nMotorIndex][1], LOW);
+    bIsMotorRunningForward[nMotorIndex] = false;    
+  }  
+}
+
+void setMotorSpeed(int nMotorIndex, float normVelocity) {
+  if(normVelocity < 0) {
+    // change direction first, if needed
+    if(bIsMotorRunningForward[nMotorIndex]) {
+      analogWrite(c_motorEnablePin[nMotorIndex], LOW);
+      setMotorDirection(nMotorIndex, false);
+    }
+    normVelocity *= -1;  // make this a positive number
+  }
+  else {
+    // change direction first, if needed
+    if(!bIsMotorRunningForward[nMotorIndex]) {
+      analogWrite(c_motorEnablePin[nMotorIndex], LOW);
+      setMotorDirection(nMotorIndex, true);
+    }    
+  }
+  
+  // calculate new speed with floating point
+  float scaledVelocity = normVelocity * 255;
+  // Serial.print("Scaled velocity: ");
+  // Serial.println(scaledVelocity);
+  // write out new speed
+  analogWrite(c_motorEnablePin[nMotorIndex], scaledVelocity);
+}
+
+// Quadrature encoders
+void SetupEncoders()
+{
+  // set relevant interrupt pins as input
+  pinMode(c_LeftTriggerPin, INPUT);
+  digitalWrite(c_LeftTriggerPin, LOW);  // turn on pulldown resistor
+  pinMode(c_RightTriggerPin, INPUT);
+  digitalWrite(c_RightTriggerPin, LOW);  // turn on pulldown resistor
+  
+  // set direction pins as input
+  pinMode(c_LeftEncoderPinDirection, INPUT);
+  digitalWrite(c_LeftEncoderPinDirection, LOW);
+  pinMode(c_RightEncoderPinDirection, INPUT);
+  digitalWrite(c_RightEncoderPinDirection, LOW);
+   
+  // attach interrupts for each encoder
+  attachInterrupt(c_encoderInterrupt[0], HandleLeftMotorInterrupt, CHANGE); 
+  attachInterrupt(c_encoderInterrupt[1], HandleRightMotorInterrupt, CHANGE); 
+}
+
+void HandleLeftMotorInterrupt() {
+  HandleMotorInterrupt(0);
+}
+
+void HandleRightMotorInterrupt() {
+  // Serial.println("Hi right!");
+  HandleMotorInterrupt(1);
+}
+
+// Interrupt service routines for the right motor's quadrature encoder
+void HandleMotorInterrupt(int nMotorIndex)
+{  
+  if(debouncing) {
+    delay(1);
+  }
+     
+  boolean _bClockDirection;
+  boolean bThisRead;
+  
+  if(nMotorIndex == 0) {
+    _bClockDirection = digitalReadFast(c_LeftEncoderPinDirection);   // read the input pin
+    bThisRead = digitalReadFast(c_LeftTriggerPin);
+  }
+  else {
+    _bClockDirection = digitalReadFast(c_RightEncoderPinDirection);   // read the input pin
+    bThisRead = digitalReadFast(c_RightTriggerPin);
+  }
+
+  // debounce
+  if(bThisRead != _bLastDigitalValue[nMotorIndex]) {
+    _bLastDigitalValue[nMotorIndex] = bThisRead;
+    
+    // debouncing = false; // works only if loop has no delay
+    
+    // and adjust counter + if running counter-clockwise    
+    if(_bIsMotorReversed[nMotorIndex]) {
+      _lEncoderTicks[nMotorIndex] -= _bClockDirection ? -1 : +1;      
+    }
+    else {
+      _lEncoderTicks[nMotorIndex] += _bClockDirection ? -1 : +1;
+    }        
+  }
+}
+
+
+
