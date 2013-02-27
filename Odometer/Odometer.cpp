@@ -41,7 +41,7 @@ void Odometer::setup(WheelEncoder* inEncoder[2], boolean isEncoderForward[2], do
 	vLeft = 0.0;
 	vRight = 0.0;
 
-	turnFudgeFactor = 1.0;
+	// turnFudgeFactor = 1.0;
 
 	trackWidth = inTrackWidth;
 
@@ -101,7 +101,6 @@ void Odometer::update() {
 	double deltaDistanceRight = deltaRightTicks * distancePerCount[MOTOR_RIGHT];
 
 	double deltaHeading = (double)(deltaDistanceRight - deltaDistanceLeft) / trackWidth ;
-	deltaHeading /= turnFudgeFactor;
 
 	double deltaX, deltaY;
 	calculateDeltasCrude(&deltaX, &deltaY, deltaDistanceLeft, deltaDistanceRight);
@@ -153,7 +152,6 @@ void Odometer::update() {
 void Odometer::calculateDeltasCrude(double *deltaX, double *deltaY,
 		double deltaDistanceLeft, double deltaDistanceRight) {
 	double deltaDistance = 0.5 * (deltaDistanceLeft + deltaDistanceRight);
-	double deltaDiff = deltaDistanceRight - deltaDistanceLeft;
 
 	*deltaX = deltaDistance * cos(heading);
 	*deltaY = deltaDistance * sin(heading);

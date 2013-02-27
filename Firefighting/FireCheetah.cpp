@@ -73,7 +73,6 @@ void FireCheetah::setup() {
 
 	trackWidth = 17.7; // outer distance, measured. 15.1 originally
 	odom.setup(encoder, isMotorForward, wheelDiameter, (double)trackWidth);
-	odom.setTurnFudgeFactor(turnFudgeFactor);
 
 	moveMotorIndex = MOTOR_RIGHT;
 	
@@ -97,12 +96,12 @@ void FireCheetah::setup() {
 	// 9V values
 	followWallSpeed = floor(93.3 / batteryChargeLevel);
 	bangBangDelta = floor(40.0 / batteryChargeLevel);
-	moveSpeed = 90; // 65; // floor(53.3 / batteryChargeLevel);
-	turnSpeed = 60;
+	moveSpeed = 65; // 90; // floor(5653.3 / batteryChargeLevel);
+	turnSpeed = 30;
 
 	// Target velocities, in units of cm/s or rad/s. 1 cm = 0.39 inches, 1 rad ~ 57 degrees
 	targetMoveVelocity = 15.0;
-	targetAngularVelocity = 1;
+	targetAngularVelocity = 0.6;
 		
 	for(int i = 0; i < 2; i++) {
 		desiredWallSensorReading[i] = 120;

@@ -24,7 +24,8 @@ public:
 
 	void setGoalPosition(double x, double y);
 	void setGoalHeading(double inHeading) { goalHeading = inHeading; };
-	void setTurnFudgeFactor(double inFudge) { turnFudgeFactor = inFudge; };
+	void setCurrentPosition(double x, double y, double heading);
+	// void setTurnFudgeFactor(double inFudge) { turnFudgeFactor = inFudge; };
 
 	// used for remote control
 	void translateToLeftRightVelocities(float *newLeft, float *newRight, float commandedVelocity, float commandedAngularVelocity);
@@ -52,7 +53,7 @@ private:
 	double trackWidth;
 	double countsPerRevolution[2];
 	double distancePerCount[2];
-	double turnFudgeFactor;
+	// double turnFudgeFactor;
 
 	long previousLeftEncoderCounts;
 	long previousRightEncoderCounts;
@@ -70,7 +71,6 @@ private:
 	double vRight;
 	double omega;
 
-	void setCurrentPosition(double x, double y, double heading);
 	void calculateDeltasCrude(double *deltaX, double *deltaY,
 			double deltaDistanceLeft, double deltaDistanceRight);
 	void calculateDeltasRefined(double *deltaX, double *deltaY,
