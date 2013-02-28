@@ -83,17 +83,15 @@ class FirefighterRobot {
 
 		void stop();
 		void drive(int velocityLeft, int velocityRight);
-		void move(float distance);	// go this distance in a straight line, forward or back only
-		void turn(float degrees);
+		boolean goToGoal(double goalX, double goalY);
+		boolean turnToHeading(double goalHeading);
+		void move(float distance);	// go this distance in a straight line, forward or back only DEPRECATED
+		void turn(float degrees); // DEPRECATED
 		void setFanServo(short degrees);	// 0 is pointing forward
 		void turnFanOn(boolean on);
 		int panServoForFire();
 		void fightFire();		
 		void recover();
-		boolean goToGoal(double goalX, double goalY);
-		boolean goToGoal(double goalX, double goalY, double currentX, double currentY, double currentHeading);
-		boolean turnToHeading(double goalHeading);
-		boolean turnToHeading(double goalHeading, double currentHeading);
 
 		boolean isFire(boolean bNear);		
 		float getBatteryChargeLevel() { return batteryChargeLevel; };

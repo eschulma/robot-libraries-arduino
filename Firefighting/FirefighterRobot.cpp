@@ -44,15 +44,21 @@ void FirefighterRobot::drive(int velocityLeft, int velocityRight) {
 }
 
 /**
- * Get the robot to a new spot. We don't care about the final heading.
+ * Move the robot the specified distances. We don't care about the final heading.
  *
  * Call is responsible for calling stop() after this function, if that is the
  * desired behavior, otherwise the bot will keep going.
  *
- * Return true for success, false for failure
+ * Return true for success, false for failure.
  */
-boolean FirefighterRobot::goToGoal(double goalX, double goalY,
-	double currentX, double currentY, double currentHeading) {
+boolean FirefighterRobot::goToGoal(double deltaX, double deltaY) {
+	double currentX, currentY;
+	currentX = odom.getX();
+	currentY = odom.getY();
+
+	double goalX, goalY;
+	goalX = currentX + deltaX;
+	goalY = currentY + deltaY;
 
 	boolean bSuccess = false;
 
@@ -62,7 +68,9 @@ boolean FirefighterRobot::goToGoal(double goalX, double goalY,
 	int maxSpeed = 254;
 
 	// if the goal is behind us, best to move backwards
-	if(goalX < currentX) {
+	// this depends on heading; if it's more than 90 degrees from forward, go backwards
+	float headingToGoal = atan2(deltaY, deltaX);
+	if(fabs(headingToGoal - odom.getHeading()) > PI/2.0) {
 		baseSpeed *= -1;
 		targetVelocity *= -1;
 		minSpeed = -254;
@@ -86,7 +94,6 @@ boolean FirefighterRobot::goToGoal(double goalX, double goalY,
 
 	stallWatcher->reset();
 
-	odom.setCurrentPosition(currentX, currentY, currentHeading);
 	odom.setGoalPosition(goalX, goalY);
 	odom.update();
 
@@ -163,23 +170,19 @@ boolean FirefighterRobot::goToGoal(double goalX, double goalY,
 }
 
 /**
- * goToGoal relative to our current position, rather than in absolute terms.
- */
-boolean FirefighterRobot::goToGoal(double goalX, double goalY) {
-	double x = odom.getX();
-	double y = odom.getY();
-	return goToGoal(x + goalX, x + goalY, x, y, 0.0);
-}
-
-/**
  * Turn in place until we face the direction specified by goalHeading. Return true for
  * success.
  */
+
 /**
-* Turn in place until we face the direction specified by goalHeading. Return true for
+* Turn in place until we have changed heading the specified amount. Return true for
 * success.
 */
-boolean FirefighterRobot::turnToHeading(double goalHeading, double currentHeading) {
+boolean FirefighterRobot::turnToHeading(double headingChange) {
+	double currentHeading = odom.getHeading();
+	double goalHeading = headingChange + currentHeading;
+	goalHeading = atan2(sin(goalHeading), cos(goalHeading));
+
 	boolean bSuccess = false;
 
 	float baseSpeed = turnSpeed;	// units from 0 to 254, input for drive command
@@ -217,7 +220,6 @@ boolean FirefighterRobot::turnToHeading(double goalHeading, double currentHeadin
 
 	stallWatcher->reset();
 
-	odom.setCurrentPosition(odom.getX(), odom.getY(), currentHeading);
 	odom.setGoalHeading(goalHeading);
 	odom.reset();
 	odom.update();
@@ -310,18 +312,6 @@ boolean FirefighterRobot::turnToHeading(double goalHeading, double currentHeadin
 
 	return bSuccess;
 }
-
-/**
- * Turn relative to our current heading, rather than in absolute terms.
- */
-boolean FirefighterRobot::turnToHeading(double goalHeading) {
-	double currentHeading = odom.getHeading();
-	double newHeading = goalHeading + currentHeading;
-	newHeading = atan2(sin(newHeading), cos(newHeading));
-
-	return turnToHeading(newHeading, currentHeading);
-}
-
 
 /**
  *	Move the robot a short distance straight forward (or back), based on the encoder value
