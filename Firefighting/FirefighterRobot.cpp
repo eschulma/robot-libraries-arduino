@@ -223,32 +223,21 @@ boolean FirefighterRobot::turnToHeading(double goalHeading, double currentHeadin
 	odom.update();
 	delay(10);
 
-	// TODO: Might be best to make these floats, and let accelerations accrue; right now all
-	// our accelerations are +1 or -1...
-
-	int dr = (int)floor(baseSpeed);
-	int dl = -dr;
+	float dr = baseSpeed;
+	float dl = -dr;
 	double accel = 0;
 	int nLoops = 0;
 
 	do {
 		// acceleration is the value that works with PID
-		accel = velocityError * kP_accel;	// this is positive when we are too fast
+		accel = velocityError * kP_accel;	// this is negative when we are too fast
 		// to avoid changes going to zero via rounding errors (neither floor nor ceiing is perfect):
-		if((accel != 0) && fabs(accel) < 1) {
-			if(velocityError > 0) {
-				accel = 1.1;
-			}
-			else {
-				accel = -1.1;
-			}
-		}
 		if(goalHeading < currentHeading) {
 			accel *= -1;
 		}
 
 		// be careful rounding -- the change can go to zero!
-		dr -= (int)ceil(accel);
+		dr += accel;
 
 		// don't allow drive to go from positive to negative...bad for motors; and 254 is max
 		dr = constrain(dr, minRSpeed, maxRSpeed);
@@ -259,7 +248,7 @@ boolean FirefighterRobot::turnToHeading(double goalHeading, double currentHeadin
 
 		// figure out the right drive voltage to use for our desired speed
 		if(nLoops > 1) {
-			velocityError = fabs(odom.getAngularVelocity()) - fabs(targetVelocity);
+			velocityError =  fabs(targetVelocity)- fabs(odom.getAngularVelocity());
 		}
 
 		 Serial.print("dl = ");
