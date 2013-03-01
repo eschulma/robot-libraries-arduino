@@ -101,7 +101,7 @@ void FireCheetah::setup() {
 
 	// Target velocities, in units of cm/s or rad/s. 1 cm = 0.39 inches, 1 rad ~ 57 degrees
 	targetMoveVelocity = 15.0;
-	targetFollowVelocity = targetMoveVelocity;
+	targetFollowVelocity = 20.0;
 	targetAngularVelocity = 0.6;
 		
 	for(int i = 0; i < 2; i++) {

@@ -410,7 +410,7 @@ void FirefighterRobot::followWall(short direction, int optimalWallSensorReading)
 	int driveSpeed[2];
 
 	// PID values. One set for heading error and one set for total velocity
-	float kP = 0.2;
+	float kP = 0.02;
 	float kP_velocity = 0.01;
 
 	short oppositeDirection = !direction;	// this works for right and left only, note
@@ -428,6 +428,9 @@ void FirefighterRobot::followWall(short direction, int optimalWallSensorReading)
 	float velocityError = odom.getLinearVelocity() - targetFollowVelocity;
 	followWallCalculatedSpeed *= (1 - (kP_velocity * velocityError));
 	
+//	Serial.print("Velocity error: ");
+//	Serial.println(velocityError);
+
 	// let's go
 	drive(constrain(driveSpeed[MOTOR_LEFT], 0, 254), constrain(driveSpeed[MOTOR_RIGHT], 0, 254));
 }
