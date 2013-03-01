@@ -33,6 +33,8 @@ void Odometer::setup(WheelEncoder* inEncoder[2], boolean isEncoderForward[2], do
 		}
 	}
 
+	maxUpdateTime = 250;
+
 	X = 0.0;
 	Y = 0.0;
 	heading = 0.0;
@@ -72,11 +74,14 @@ void Odometer::setCurrentPosition(double x, double y, double inHeading) {
 	X = x;
 	Y = y;
 	heading = inHeading;
+
+	targetHeading = calculateGoalHeading();
 }
 
 void Odometer::setGoalPosition(double x, double y) {
 	goalX = x;
 	goalY = y;
+	targetHeading = calculateGoalHeading();
 }
 
 /**
@@ -85,6 +90,17 @@ void Odometer::setGoalPosition(double x, double y) {
  *	approximations.
  */
 void Odometer::update() {
+	unsigned long currentTime = millis();
+	long deltaTime = currentTime - previousUpdateTime;
+	previousUpdateTime = currentTime;
+
+	// if the last update was a very long time ago, go back
+	// to avoid artifacts from any intervening motion
+	if(deltaTime > maxUpdateTime) {
+		reset();
+		return;
+	}
+
 	long leftEncoderCounts = encoder[MOTOR_LEFT]->read() * encodeFactor[MOTOR_LEFT];
 	long rightEncoderCounts = encoder[MOTOR_RIGHT]->read() * encodeFactor[MOTOR_RIGHT];
 
@@ -92,10 +108,6 @@ void Odometer::update() {
 	long deltaRightTicks = rightEncoderCounts - previousRightEncoderCounts;
 	previousLeftEncoderCounts = leftEncoderCounts;
 	previousRightEncoderCounts = rightEncoderCounts;
-
-	unsigned long currentTime = millis();
-	long deltaTime = currentTime - previousUpdateTime;
-	previousUpdateTime = currentTime;
 
 	double deltaDistanceLeft = deltaLeftTicks * distancePerCount[MOTOR_LEFT];
 	double deltaDistanceRight = deltaRightTicks * distancePerCount[MOTOR_RIGHT];
@@ -131,12 +143,12 @@ void Odometer::update() {
 //	Serial.println(omega);
 //	Serial.println("");
 
-	if(vLeft == 0) {
-		Serial.println("Zero left velocity");
-	}
-	if(vRight == 0) {
-		Serial.println("Zero right velocity");
-	}
+//	if(vLeft == 0) {
+//		Serial.println("Zero left velocity");
+//	}
+//	if(vRight == 0) {
+//		Serial.println("Zero right velocity");
+//	}
 
 	// limit heading to -Pi <= heading < Pi
 	heading = atan2(sin(heading), cos(heading));
@@ -165,11 +177,16 @@ void Odometer::calculateDeltasRefined(double *deltaX, double *deltaY,
 	double deltaDistance = 0.5 * (deltaDistanceLeft + deltaDistanceRight);
 	double deltaDiff = deltaDistanceRight - deltaDistanceLeft;
 
-	// we are assuming constant velocity for each wheel (though they may differ from each other)
-	*deltaX = ((trackWidth * deltaDistance) / (2 * deltaDiff)) *
+	if(deltaDiff != 0) {
+		// we are assuming constant velocity for each wheel (though they may differ from each other)
+		*deltaX = ((trackWidth * deltaDistance) / (2 * deltaDiff)) *
 			(sin((deltaDistance / trackWidth) + heading) - sin(heading));
-	*deltaY = - ((trackWidth * deltaDistance) / (2 * deltaDiff)) *
+		*deltaY = - ((trackWidth * deltaDistance) / (2 * deltaDiff)) *
 			(cos((deltaDistance / trackWidth) + heading) - cos(heading));
+	}
+	else {
+		calculateDeltasCrude(deltaX, deltaY, deltaDistanceLeft, deltaDistanceRight);
+	}
 }
 
 /**
@@ -204,8 +221,8 @@ void Odometer::translateToLeftRightVelocities(float* normLeft, float* normRight,
  *
  */
 double Odometer::calculateGoalHeading() {
-	 double calcHeading = atan2(goalY - Y, goalX - X);
-	 return calcHeading;
+	double goalHeading = atan2(goalY - Y, goalX - X);
+	return goalHeading;
 }
 
 /**
@@ -253,15 +270,15 @@ double Odometer::getDistanceToGoal() {
 	return sqrt(pow(goalX - X, 2) + pow(goalY - Y, 2));
 }
 
-/**
- * Allows callers to sleep while keeping odometry up to date.
- */
-void Odometer::delay(long ms) {
-	for(int i = 0; i < ms; i++) {
-		delay(1);
-		update();
-	}
-}
+///**
+// * Allows callers to sleep while keeping odometry up to date.
+// */
+//void Odometer::delay(long ms) {
+//	for(int i = 0; i < ms; i++) {
+//		delay(1);
+//		update();
+//	}
+//} CRASHES!
 
 /**
  * For the robot, "forward" is x and "left" is y. Take points specified

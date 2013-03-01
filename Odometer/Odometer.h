@@ -21,17 +21,18 @@ public:
 	void setup(WheelEncoder *inEncoder[2], boolean isEncoderForward[2], double inWheelDiameter[2], double trackWidth);
 	void update();
 	void reset();
-	void delay(long ms);
 
 	void setGoalPosition(double x, double y);
-	void setGoalHeading(double inHeading) { goalHeading = inHeading; };
+	void setTargetHeading(double inHeading) { targetHeading = inHeading; }; // used for turn function
+
+	void setCurrentPosition(double x, double y, double heading);
 
 	void transformRobotPointToOdomPoint(double *x, double *y);
 	// used for remote control
 	void translateToLeftRightVelocities(float *newLeft, float *newRight, float commandedVelocity, float commandedAngularVelocity);
 
 	double getHeading() { return heading; };
-	double getGoalHeading() { return goalHeading; };
+	double getTargetHeading() { return targetHeading; }; // used for turn function
 	double calculateGoalHeading();
 	double getHeadingError();
 	double getHeadingError(double goalHeading);
@@ -58,10 +59,11 @@ private:
 	long previousLeftEncoderCounts;
 	long previousRightEncoderCounts;
 	unsigned long previousUpdateTime;
+	long maxUpdateTime;
 
 	double goalX;
 	double goalY;
-	double goalHeading;
+	double targetHeading;
 
 	// filled by update
 	double X;  // x coord in global frame
@@ -71,7 +73,6 @@ private:
 	double vRight;
 	double omega;
 
-	void setCurrentPosition(double x, double y, double heading);
 	void calculateDeltasCrude(double *deltaX, double *deltaY,
 			double deltaDistanceLeft, double deltaDistanceRight);
 	void calculateDeltasRefined(double *deltaX, double *deltaY,
