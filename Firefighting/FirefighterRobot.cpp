@@ -47,14 +47,25 @@ void FirefighterRobot::drive(int velocityLeft, int velocityRight) {
  * Move the robot forward and left the specified amount.
  * We don't care about the final heading.
  *
+ * We can operate in the existing world frame, or reset the world frame to be
+ * the robot frame. For multiple maneuvers the robot frame is safer,
+ * you will at least get the right move** relative to the robot's current location**
+ * and that may be the most important thing. However, any Odometer goal or mark points
+ * will be invalidated; to keep them, set resetWorldFrameToRobot false.
+ *
  * Caller is responsible for calling stop() after this function, if that is the
  * desired behavior, otherwise the bot will keep going.
  *
  * Return true for success, false for failure.
  */
-boolean FirefighterRobot::move(double forward, double left) {
-	// must transform from robot frame to world frame
-	odom.transformRobotPointToOdomPoint(&forward, &left);
+boolean FirefighterRobot::move(double forward, double left, boolean resetWorldFrameToRobot) {
+	if(!resetWorldFrameToRobot) {
+		// must transform from robot frame to world frame
+		odom.transformRobotPointToOdomPoint(&forward, &left);
+	}
+	else {
+		odom.setCurrentPosition(0, 0, 0);
+	}
 	// now forward and left are really x and y in the world frame
 	return goToGoal(forward, left);
 }
@@ -63,6 +74,10 @@ boolean FirefighterRobot::move(double forward, double left) {
 /**
  * Move the robot to the specified goal point in world coordinates.
  * We don't care about the final heading.
+ *
+ * This is a little risky to call repeatedly, unless the odometry is very
+ * accurate or has been corrected by sensor input. If it isn't, the world
+ * and robot frames will disconnect fairly quickly.
  *
  * Caller is responsible for calling stop() after this function, if that is the
  * desired behavior, otherwise the bot will keep going.
@@ -80,14 +95,12 @@ boolean FirefighterRobot::goToGoal(double goalX, double goalY) {
 	odom.setGoalPosition(goalX, goalY);
 	odom.update();
 
-	// if the goal is behind us, best to move backwards
-	// this depends on heading; if it's more than 90 degrees from forward, go backwards
-	if(odom.getHeadingError() > PI/2.0) {
-		baseSpeed *= -1;
-		targetVelocity *= -1;
-		minSpeed = -254;
-		maxSpeed = -1;
-	}
+	Serial.print("Goal heading (degrees): ");
+	Serial.println(odom.calculateGoalHeading() * RAD_TO_DEG);
+	Serial.print("Current heading (degrees): ");
+	Serial.println(odom.getHeading() * RAD_TO_DEG);
+//	Serial.print("Heading error (degrees): ");
+//	Serial.println(odom.getHeadingError() * RAD_TO_DEG);
 
 	double maxDistanceError = 1;
 	double minDistance = 10000;
@@ -226,7 +239,7 @@ boolean FirefighterRobot::turn(double headingChange) {
 
 	stallWatcher->reset();
 
-	odom.setGoalHeading(goalHeading);
+	odom.setTargetHeading(goalHeading);
 	odom.reset();
 	odom.update();
 	delay(10);
@@ -411,6 +424,7 @@ void FirefighterRobot::followWall(short direction, int optimalWallSensorReading)
 	driveSpeed[oppositeDirection] = followWallCalculatedSpeed * (1 - (kP * headingError));
 
 	// we only go forward here; error is positive if we are too fast
+	odom.update();
 	float velocityError = odom.getLinearVelocity() - targetFollowVelocity;
 	followWallCalculatedSpeed *= (1 - (kP_velocity * velocityError));
 	

@@ -84,7 +84,7 @@ class FirefighterRobot {
 
 		void stop();
 		void drive(int velocityLeft, int velocityRight);
-		boolean move(double forward, double left);
+		boolean move(double forward, double left, boolean resetWorldFrameToRobot = true);
 		boolean goToGoal(double goalX, double goalY);
 		boolean turn(double deltaHeading);
 		void move(float distance);	// go this distance in a straight line, forward or back only DEPRECATED
