@@ -54,6 +54,7 @@ class FirefighterRobot {
 		int turnSpeed;
 		int followWallSpeed;
 		float targetMoveVelocity;
+		float targetFollowVelocity;
 		float targetAngularVelocity;
 		int bangBangDelta;
 		short moveMotorIndex;
@@ -83,10 +84,10 @@ class FirefighterRobot {
 
 		void stop();
 		void drive(int velocityLeft, int velocityRight);
+		boolean move(double forward, double left);
 		boolean goToGoal(double goalX, double goalY);
-		boolean turnToHeading(double goalHeading);
+		boolean turn(double deltaHeading);
 		void move(float distance);	// go this distance in a straight line, forward or back only DEPRECATED
-		void turn(float degrees); // DEPRECATED
 		void setFanServo(short degrees);	// 0 is pointing forward
 		void turnFanOn(boolean on);
 		int panServoForFire();

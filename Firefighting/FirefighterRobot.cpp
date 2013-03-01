@@ -44,22 +44,32 @@ void FirefighterRobot::drive(int velocityLeft, int velocityRight) {
 }
 
 /**
- * Move the robot the specified distances. We don't care about the final heading.
+ * Move the robot forward and left the specified amount.
+ * We don't care about the final heading.
  *
- * Call is responsible for calling stop() after this function, if that is the
+ * Caller is responsible for calling stop() after this function, if that is the
  * desired behavior, otherwise the bot will keep going.
  *
  * Return true for success, false for failure.
  */
-boolean FirefighterRobot::goToGoal(double deltaX, double deltaY) {
-	double currentX, currentY;
-	currentX = odom.getX();
-	currentY = odom.getY();
+boolean FirefighterRobot::move(double forward, double left) {
+	// must transform from robot frame to world frame
+	odom.transformRobotPointToOdomPoint(&forward, &left);
+	// now forward and left are really x and y in the world frame
+	return goToGoal(forward, left);
+}
 
-	double goalX, goalY;
-	goalX = currentX + deltaX;
-	goalY = currentY + deltaY;
 
+/**
+ * Move the robot to the specified goal point in world coordinates.
+ * We don't care about the final heading.
+ *
+ * Caller is responsible for calling stop() after this function, if that is the
+ * desired behavior, otherwise the bot will keep going.
+ *
+ * Return true for success, false for failure.
+ */
+boolean FirefighterRobot::goToGoal(double goalX, double goalY) {
 	boolean bSuccess = false;
 
 	float baseSpeed = moveSpeed;	// units from 0 to 254, input for drive command
@@ -67,10 +77,12 @@ boolean FirefighterRobot::goToGoal(double deltaX, double deltaY) {
 	int minSpeed = 1;
 	int maxSpeed = 254;
 
+	odom.setGoalPosition(goalX, goalY);
+	odom.update();
+
 	// if the goal is behind us, best to move backwards
 	// this depends on heading; if it's more than 90 degrees from forward, go backwards
-	float headingToGoal = atan2(deltaY, deltaX);
-	if(fabs(headingToGoal - odom.getHeading()) > PI/2.0) {
+	if(odom.getHeadingError() > PI/2.0) {
 		baseSpeed *= -1;
 		targetVelocity *= -1;
 		minSpeed = -254;
@@ -89,19 +101,16 @@ boolean FirefighterRobot::goToGoal(double deltaX, double deltaY) {
 	double slowDownDistance = 1;
 
 	// PID values. One set for heading error and one set for total velocity
-	double kP = 50;
+	double kP = 16;
 	double kP_velocity = 0.01;
 
 	stallWatcher->reset();
-
-	odom.setGoalPosition(goalX, goalY);
-	odom.update();
 
 	int dlRaw, drRaw;
 	long nLoops = 0;
 
 	do {
-		headingError = odom.getNormalizedHeadingError();	// this will be between 1 and -1
+		headingError = odom.getHeadingError();	// this will be between 1 and -1
 
 		dlRaw = (int)ceil(baseSpeed * (1 + (kP * headingError)));
 		drRaw = (int)ceil(baseSpeed * (1 - (kP * headingError)));
@@ -170,17 +179,14 @@ boolean FirefighterRobot::goToGoal(double deltaX, double deltaY) {
 }
 
 /**
- * Turn in place until we face the direction specified by goalHeading. Return true for
- * success.
- */
-
-/**
-* Turn in place until we have changed heading the specified amount. Return true for
+* Turn in place until we have changed heading the specified number of radians. Return true for
 * success.
 */
-boolean FirefighterRobot::turnToHeading(double headingChange) {
-	double currentHeading = odom.getHeading();
-	double goalHeading = headingChange + currentHeading;
+boolean FirefighterRobot::turn(double headingChange) {
+	// safeguard against backwards turn
+	headingChange = atan2(sin(headingChange), cos(headingChange));
+
+	double goalHeading = headingChange + odom.getHeading();
 	goalHeading = atan2(sin(goalHeading), cos(goalHeading));
 
 	boolean bSuccess = false;
@@ -194,8 +200,8 @@ boolean FirefighterRobot::turnToHeading(double headingChange) {
 	int minRSpeed = 0;
 	int maxRSpeed = 254;
 
-	// turn in the correct direction
-	if(goalHeading < currentHeading) {
+	// turn in the specified direction
+	if(headingChange < 0) {
 		baseSpeed *= -1;
 		targetVelocity *= -1;
 
@@ -215,7 +221,7 @@ boolean FirefighterRobot::turnToHeading(double headingChange) {
 	double slowDownFactor = 0.5;
 	double slowDownAngularDistance = 0.04;
 
-	// PID values. Best to choose it so targetVelocity * kP_accel > 1
+	// PID values
 	double kP_accel = 2;
 
 	stallWatcher->reset();
@@ -233,8 +239,7 @@ boolean FirefighterRobot::turnToHeading(double headingChange) {
 	do {
 		// acceleration is the value that works with PID
 		accel = velocityError * kP_accel;	// this is negative when we are too fast
-		// to avoid changes going to zero via rounding errors (neither floor nor ceiing is perfect):
-		if(goalHeading < currentHeading) {
+		if(headingChange < 0) {
 			accel *= -1;
 		}
 
@@ -253,14 +258,14 @@ boolean FirefighterRobot::turnToHeading(double headingChange) {
 			velocityError =  fabs(targetVelocity)- fabs(odom.getAngularVelocity());
 		}
 
-		 Serial.print("dl = ");
-		 Serial.println(dl);
-		 Serial.print("velocity error = ");
-		 Serial.println(velocityError);
-		 Serial.print("accel = ");
-		 Serial.println(accel);
+//		 Serial.print("dl = ");
+//		 Serial.println(dl);
+//		 Serial.print("velocity error = ");
+//		 Serial.println(velocityError);
+//		 Serial.print("accel = ");
+//		 Serial.println(accel);
 
-		radsFromGoalAngle = fabs(odom.getNormalizedHeadingError(goalHeading)) * M_PI;
+		radsFromGoalAngle = fabs(odom.getHeadingError(goalHeading));
 		// Serial.print("Radians from goal: ");
 		// Serial.println(radsFromGoalAngle);
 
@@ -272,6 +277,7 @@ boolean FirefighterRobot::turnToHeading(double headingChange) {
 			}
 		}
 
+		// Potentially problematic if user specifies a "backwards" turn, so put in safeguards
 		// allow for some noise here
 		if(radsFromGoalAngle < minAngularDistance) {
 			minAngularDistance = radsFromGoalAngle;
@@ -346,47 +352,6 @@ void FirefighterRobot::move(float distance) {
 			(getOdometerValue(moveMotorIndex) > -ticks));
 }
 
-/**
- *	Both wheels move and keep the robot in one place (hopefully).
- */
-void FirefighterRobot::turn(float degrees) {
-	/* if((degrees > 15) || (degrees < -15)) {
-		Serial.print("Turn ");
-		Serial.println(degrees);
-	} */
-	
-	// distance = (degrees / 360) * circumference = (degrees / 360) * (PI * trackWidth)
-	// distance = (ticks/counts per rev) * wheel circumference = (ticks/counts per rev) * (wheel diam * PI)
-	// (ticks/counts pr) * (wheel diam) = (degrees / 360) * trackWidth
-	// ticks = (degrees / 360) * trackWidth * (counts pr / wheel diameter)
-	// ticks = (degrees * trackWidth * counts pr) / (wheel diam * 360)	
-	// must always be positive
-	// ... if you mess with this...be careful with float and int math, keep floats in there and in floor
-	double goalTicks = floor(turnFudgeFactor * (trackWidth * fabs(degrees) * 
-				encoder[ moveMotorIndex ]->getCountsPerRevolution()) / 
-		(wheelDiameter[ moveMotorIndex ] * 360.0));	
-	// it seems we need turnFudgeFactor to be 1.5 for this to actually work. But I don't see a math error.
-		
-	resetOdometers();
-	if(degrees > 0) {
-		drive(-turnSpeed, turnSpeed);
-	}
-	else {
-		drive(turnSpeed, -turnSpeed);
-	}
-	
-	double totalTicks = 0;
-	do {
-		totalTicks = fabs(getOdometerValue(MOTOR_LEFT) - getOdometerValue(MOTOR_RIGHT));
-	}
-	while(totalTicks < goalTicks);
-	
-	// Serial.print("left ticks: ");
-	// Serial.println(getOdometerValue(MOTOR_LEFT));
-	
-	stop();
-}
-
 void FirefighterRobot::turnFanOn(boolean on) {
 	if(on) {
 		digitalWrite(fanControlPin, HIGH);
@@ -427,22 +392,30 @@ void FirefighterRobot::initDesiredWallSensorReadings(short direction) {
  *	The key to everything. 
  */
 void FirefighterRobot::followWall(short direction, int optimalWallSensorReading) {
-	int driveSpeed[2] = { followWallSpeed, followWallSpeed }; 
+	static float followWallCalculatedSpeed = followWallSpeed;
+
+	int driveSpeed[2];
+
+	// PID values. One set for heading error and one set for total velocity
+	float kP = 0.2;
+	float kP_velocity = 0.01;
 
 	short oppositeDirection = !direction;	// this works for right and left only, note
 	
 	// Standard analog read here is slow!!!
 	// note that IR reading is higher for closer objects
 	int wallDistance = (int)getSideWallDistanceReading(direction);
-	int error = wallDistance - desiredWallSensorReading[direction];
-	
-	// error = constrain(error, -200, 200);
-	
-	driveSpeed[direction] += (0.2 * error);
-	driveSpeed[oppositeDirection] -= 	(0.2 * error);
+	int headingError = wallDistance - desiredWallSensorReading[direction];
+
+	driveSpeed[direction] = followWallCalculatedSpeed * (1 + (kP * headingError));
+	driveSpeed[oppositeDirection] = followWallCalculatedSpeed * (1 - (kP * headingError));
+
+	// we only go forward here; error is positive if we are too fast
+	float velocityError = odom.getLinearVelocity() - targetFollowVelocity;
+	followWallCalculatedSpeed *= (1 - (kP_velocity * velocityError));
 	
 	// let's go
-	drive(driveSpeed[MOTOR_LEFT], driveSpeed[MOTOR_RIGHT]);
+	drive(constrain(driveSpeed[MOTOR_LEFT], 0, 254), constrain(driveSpeed[MOTOR_RIGHT], 0, 254));
 }
 
 void FirefighterRobot::followWallRear(short direction, int optimalWallSensorReading) {

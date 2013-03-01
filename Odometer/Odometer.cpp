@@ -209,27 +209,27 @@ double Odometer::calculateGoalHeading() {
 }
 
 /**
- * 	This returns a normalized error factor (between -1 and 1) representing how we are from the
+ * 	This returns the number of radians we are from the
  * 	correct heading. Positive value means we need to turn clockwise, i.e. make the left side
  * 	faster. This can be used for PID control or other corrections.
  *
  * 	When called with no argument, we calculate out the right heading to reach to
  * 	reach the goal POINT. With a radian argument, we attempt to match that heading.
  */
-double Odometer::getNormalizedHeadingError() {
+double Odometer::getHeadingError() {
 	double requiredHeading = calculateGoalHeading();
-	return getNormalizedHeadingError(requiredHeading);
+	return getHeadingError(requiredHeading);
 }
 
 /**
- * 	This returns a normalized error factor (between -1 and 1) representing how we are from the
+ * 	This returns the number of radians we are from the
  * 	correct heading. Positive value means we need to turn clockwise, i.e. make the left side
  * 	faster. This can be used for PID control or other corrections.
  *
  * 	When called with no argument, we calculate out the right heading to reach to
  * 	reach the goal POINT. With a radian argument, we attempt to match that heading.
  */
-double Odometer::getNormalizedHeadingError(double requiredHeading) {
+double Odometer::getHeadingError(double requiredHeading) {
 	double headingDiff = heading - requiredHeading;
 //	Serial.print("Heading = ");
 //	Serial.println(heading);
@@ -237,7 +237,7 @@ double Odometer::getNormalizedHeadingError(double requiredHeading) {
 //	Serial.println(requiredHeading);
 
 	// for safety, use atan2 which guarantees -PI to PI range
-	double error = atan2(sin(headingDiff), cos(headingDiff)) / PI;
+	double error = atan2(sin(headingDiff), cos(headingDiff));
 
 //	Serial.print("Error = ");
 //	Serial.println(error);
@@ -251,4 +251,33 @@ double Odometer::getDistanceToGoal() {
 //	Serial.println(GoalY - Y);
 
 	return sqrt(pow(goalX - X, 2) + pow(goalY - Y, 2));
+}
+
+/**
+ * Allows callers to sleep while keeping odometry up to date.
+ */
+void Odometer::delay(long ms) {
+	for(int i = 0; i < ms; i++) {
+		delay(1);
+		update();
+	}
+}
+
+/**
+ * For the robot, "forward" is x and "left" is y. Take points specified
+ * in the robot's point of view and translate them into the Odometer point of view
+ * (the world frame).
+ */
+void Odometer::transformRobotPointToOdomPoint(double *x, double *y) {
+	// first rotate, then translate
+	double theta = -heading;
+	double xworld = (*x * cos(theta)) - (*y * sin(theta));
+	double yworld = (*x * sin(theta)) + (*y * cos(theta));
+
+	// translate
+	xworld += X;
+	yworld += Y;
+
+	*x = xworld;
+	*y = yworld;
 }

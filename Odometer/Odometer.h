@@ -21,18 +21,20 @@ public:
 	void setup(WheelEncoder *inEncoder[2], boolean isEncoderForward[2], double inWheelDiameter[2], double trackWidth);
 	void update();
 	void reset();
+	void delay(long ms);
 
 	void setGoalPosition(double x, double y);
 	void setGoalHeading(double inHeading) { goalHeading = inHeading; };
 
+	void transformRobotPointToOdomPoint(double *x, double *y);
 	// used for remote control
 	void translateToLeftRightVelocities(float *newLeft, float *newRight, float commandedVelocity, float commandedAngularVelocity);
 
 	double getHeading() { return heading; };
 	double getGoalHeading() { return goalHeading; };
 	double calculateGoalHeading();
-	double getNormalizedHeadingError();
-	double getNormalizedHeadingError(double goalHeading);
+	double getHeadingError();
+	double getHeadingError(double goalHeading);
 	double getDistanceToGoal();
 	double getLinearVelocity();
 	double getAngularVelocity() const { return omega; };
