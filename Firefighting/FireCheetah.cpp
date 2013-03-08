@@ -10,7 +10,7 @@
 ControllerMotor robotMotor[2] = { ControllerMotor(ARDUINO_MOTOR_SHIELD_LEFT_ENABLE_PIN, ARDUINO_MOTOR_SHIELD_LEFT_DIRECTION_PIN, ARDUINO_MOTOR_SHIELD_LEFT_BRAKE_PIN),
     ControllerMotor(ARDUINO_MOTOR_SHIELD_RIGHT_ENABLE_PIN, ARDUINO_MOTOR_SHIELD_RIGHT_DIRECTION_PIN, ARDUINO_MOTOR_SHIELD_RIGHT_BRAKE_PIN) };
 WheelEncoder robotEncoder[2] = { WheelEncoder(ENCODER_LEFT_A_PIN, ENCODER_LEFT_B_PIN, 
-									FAULHABER_COUNTS_PER_REVOLUTION // * 1.2
+									FAULHABER_COUNTS_PER_REVOLUTION
 									),
 								WheelEncoder(ENCODER_RIGHT_A_PIN, ENCODER_RIGHT_B_PIN,
 									FAULHABER_COUNTS_PER_REVOLUTION) };
@@ -56,11 +56,11 @@ void FireCheetah::setup() {
 	pinMode(START_BUTTON_PIN, INPUT);
 	digitalWrite(START_BUTTON_PIN, LOW);
 
-	wheelDiameter[ROBOT_LEFT] = 5.0;	// cm 5.7 by spec, 5.5 measured
-	wheelDiameter[ROBOT_RIGHT] = wheelDiameter[ROBOT_LEFT] ; //* 1.02;	// cm
+	wheelDiameter[ROBOT_LEFT] = 7.5; // cm, measured
+	wheelDiameter[ROBOT_RIGHT] = 7.4; // wheelDiameter[ROBOT_LEFT] ; //* 1.02;	// cm
 
 	// motors and encoders do their own job of setting pins input/output if setup called
-	boolean isMotorForward[2] = {true, false};
+	boolean isMotorForward[2] = {false, true};
 	for(int i = 0; i < 2; i++) {
 		motor[i]->setup();
 		motor[i]->setEncoder(encoder[i], isMotorForward[i]);
@@ -71,7 +71,7 @@ void FireCheetah::setup() {
 	turnOneWheelOnly = true;
 	turnFudgeFactor = 1.0;
 
-	trackWidth = 17.5; // 17.7; // outer distance, measured. 15.1 originally
+	trackWidth = 18.4; // 17.7; // outer distance, measured
 	odom.setup(encoder, isMotorForward, wheelDiameter, (double)trackWidth);
 
 	moveMotorIndex = MOTOR_RIGHT;
