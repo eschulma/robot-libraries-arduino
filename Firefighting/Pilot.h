@@ -36,7 +36,7 @@ class Pilot {
 		float hallwayWidth;
 		
 		void changeHeading(mazeHeading currentHeading, mazeHeading newHeading);		
-		void nudgeForward();		
+		void nudgeForwardAfterWallLoss(short wallDirection);
 		float nudgeToAlign(short wallDirection);
 		boolean fightFire();
 	public:

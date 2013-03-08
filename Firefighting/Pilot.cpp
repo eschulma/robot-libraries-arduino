@@ -31,7 +31,7 @@ boolean Pilot::fightFire() {
 	
 		// face the right direction
 		robot->setFanServo(0);
-		robot->turn(degrees);
+		robot->turn(degrees * DEG_TO_RAD);
 		delay(500);
 		
 		robot->fightFire();
@@ -95,8 +95,12 @@ int Pilot::setCourse() {
 		return -2;
 	}
 
+	// TODO: rooms 3 and 4 may have a hall of width 56 cm between them?
 	if((currentNode.id == 0) && (nextNode.id == 1)) {
-		hallwayWidth = 34;
+		hallwayWidth = 34;	// this applies when we are heading for room 3
+	}
+	else {
+		hallwayWidth = maze->getHallwayWidth();
 	}
 	
 	// hand-tune for entering room 2
@@ -136,7 +140,9 @@ int Pilot::setCourse() {
 	}
 	// hand-tune for *after* leaving node 4 to go to 1
 	if((currentNode.id == 1) && (nextNode.id == 8)) {
-		nudgeForward();
+		// nudgeForward();
+		float nudgeDistance = ((hallwayWidth + robot->getTrackWidth())/2.0);
+		robot->move(nudgeDistance, 0);
 		robot->stop();
 	}
 	
@@ -211,27 +217,6 @@ int Pilot::setCourse() {
 		distanceToNext = hallwayWidth + 5;
 	}
 	
-	// (put any handtuning here)
-	if((currentNode.id == 1) && (nextNode.id == 2)) {
-		followMethod = PILOT_FOLLOW_LEFT;
-		doAlignLeft = false;
-	}	
-	if((currentNode.id == 1) && (nextNode.id == 8)) {
-		followMethod = PILOT_FOLLOW_RIGHT;
-		doAlignRight = true;
-	}
-	if(currentNode.isRoom) {
-		// we are following right wall out
-		followMethod = PILOT_FOLLOW_RIGHT;
-		doAlignRight = true;
-	}
-	if(nextNode.id == 7) {
-		nodeCheck = PILOT_CHECK_FORWARD;
-		followMethod = PILOT_FOLLOW_NONE;
-		doAlignRight = false;
-		doAlignLeft = false;
-	}
-	
 	boolean useSonarAlignment = true;
 	if(useSonarAlignment) {
 		Serial.println("Using sonar alignment.");
@@ -249,7 +234,29 @@ int Pilot::setCourse() {
 			doAlignLeft = true;
 		}
 	}
-	
+
+	// (put any handtuning here)
+	if((currentNode.id == 1) && (nextNode.id == 2)) {
+		followMethod = PILOT_FOLLOW_LEFT;
+		doAlignLeft = false;
+	}	
+	if((currentNode.id == 1) && (nextNode.id == 8)) {
+		followMethod = PILOT_FOLLOW_RIGHT;
+		doAlignRight = true;
+	}
+	if(currentNode.isRoom) {
+		// we are following right wall out
+		followMethod = PILOT_FOLLOW_RIGHT;
+		doAlignRight = true;
+	}
+	if(nextNode.id == 7) {
+		nodeCheck = PILOT_CHECK_FORWARD;
+		// TODO: don't use PILOT_FOLLOW_NONE, use a straight move command instead, or something to keep us straight
+		followMethod = PILOT_FOLLOW_NONE;
+		doAlignRight = false;
+		doAlignLeft = false;
+	}
+
 	// if we will be following a wall, make sure that it is in view first.
 	if(doAlignRight) {
 		Serial.println("Aligning right.");
@@ -259,7 +266,7 @@ int Pilot::setCourse() {
 						
 			float dist = nudgeToAlign(MOTOR_RIGHT);
 			distanceToNext -= dist;
-			if( dist != 0) {			
+			if(dist != 0) {
 				delay(500); // need this for wall alignment.
 			}
 		}
@@ -276,7 +283,7 @@ int Pilot::setCourse() {
 						
 			float dist = nudgeToAlign(MOTOR_LEFT);
 			distanceToNext -= dist;
-			if( dist != 0) {			
+			if(dist != 0) {
 				delay(500); // need this for wall alignment.
 			}
 		}
@@ -289,7 +296,8 @@ int Pilot::setCourse() {
 	/*
 	 * Originally this was done for EVERY node. I'd rather do this once at the start,
 	 * while we are lined up nicely; however, the disadvantage is that I will only be
-	 * able to set one IR sensor at that time, and assume the other is the same.
+	 * able to set one IR sensor at that time, and assume the other is the same (which
+	 * testing bears out to be valid).
 	 */
 	if(pathIndex == 0) {
 		boolean isDesiredWallSensorReadingSet = false;
@@ -346,7 +354,7 @@ void Pilot::changeHeading(mazeHeading currentHeading, mazeHeading newHeading) {
 		robot->stop();
 		delay(500);
 
-		float my90 = 90;
+		float my90 = 90 * DEG_TO_RAD;
 	
 		if(delta == 1) {
 			// new heading is to the right
@@ -372,15 +380,14 @@ void Pilot::changeHeading(mazeHeading currentHeading, mazeHeading newHeading) {
 }
 
 int Pilot::go() {	
+	// TODO: if we are following a wall or moving and haven't reached full power yet, keep going
 	if(robot->isStalled()) {
 		robot->recover();
-		robot->turn(-30);
+		robot->turn(-30 * DEG_TO_RAD);
 		robot->stop();
 	}
 
-	//float moveStopDistance = robot->getMoveStopDistance() * 
-		//				((float)robot->getFollowWallSpeed() / (float)robot->getMoveSpeed());
-	// TODO: find replacement
+	// TODO: find replacement -- and moveStopDistance can be much smaller
 	float moveStopDistance = 8;
 	const float desiredWallDistance = ((46-robot->getTrackWidth()) / 2.0) + 2;
 	
@@ -471,7 +478,7 @@ int Pilot::go() {
 					lastPingTime += 50;
 					if(robot->isSideWallLost(ROBOT_LEFT)) {
 						Serial.println("PILOT_CHECK_LEFT triggered.");
-						nudgeForward();
+						nudgeForwardAfterWallLoss(ROBOT_LEFT);
 						return 1;
 					}
 				}
@@ -483,7 +490,7 @@ int Pilot::go() {
 					lastPingTime += 50;
 					if(robot->isSideWallLost(ROBOT_RIGHT)) {
 						Serial.println("PILOT_CHECK_RIGHT triggered.");
-						nudgeForward();
+						nudgeForwardAfterWallLoss(ROBOT_RIGHT);
 						return 1;
 					}
 				}
@@ -543,12 +550,25 @@ int Pilot::go() {
 }
 
 /**
- *	Get robot into middle of next hallway. 
+ *	Get robot into middle of next hallway. We need to know exactly
+ *	how far away (along x) the robot is from the end of the wall. This
+ *	will depend on the distance from the wall and the angle of the robot
+ *	with respect to the wall, as well as parameters relating to the placement
+ *	of various sensors.
  */
-void Pilot::nudgeForward() {
-	// we do NOT stop here, so that move ticks will be accurate from moment of wall loss
-	float nudgeDistance = ((hallwayWidth + robot->getTrackWidth())/2.0);
-	robot->move(nudgeDistance);	
+void Pilot::nudgeForwardAfterWallLoss(short wallDirection) {
+	robot->stop();
+	delay(500);
+
+	float nudgeDistance = robot->getIRWallForwardDistance(wallDirection) + (hallwayWidth / 2.0);
+
+	if(wallDirection == ROBOT_LEFT) {
+		robot->alignLeft();
+	}
+	else {
+		robot->alignRight();
+	}
+	robot->move(nudgeDistance, 0);
 	delay(DEBUG_DELAY);
 	
 	Serial.print("Nudged forward ");
