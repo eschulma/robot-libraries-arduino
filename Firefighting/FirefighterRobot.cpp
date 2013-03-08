@@ -224,7 +224,7 @@ boolean FirefighterRobot::turn(double headingChange) {
 		maxRSpeed = 0;
 	}
 
-	double maxAngleError = 0.02;
+	double maxAngleError = 1 * DEG_TO_RAD;
 	double minAngularDistance = 10000;
 	double radsFromGoalAngle = 0.0;
 	double angularNoiseMargin = 0.02;
@@ -232,7 +232,7 @@ boolean FirefighterRobot::turn(double headingChange) {
 
 	boolean wasSlowDownPerformed = false;
 	double slowDownFactor = 0.5;
-	double slowDownAngularDistance = 0.04;
+	double slowDownAngularDistance = 1 * DEG_TO_RAD;
 
 	// PID values
 	double kP_accel = 2;
@@ -405,8 +405,6 @@ void FirefighterRobot::initDesiredWallSensorReadings(short direction) {
  *	The key to everything. 
  */
 void FirefighterRobot::followWall(short direction, int optimalWallSensorReading) {
-	static float followWallCalculatedSpeed = followWallSpeed;
-
 	int driveSpeed[2];
 
 	// PID values. One set for heading error and one set for total velocity
@@ -428,11 +426,12 @@ void FirefighterRobot::followWall(short direction, int optimalWallSensorReading)
 	float velocityError = odom.getLinearVelocity() - targetFollowVelocity;
 	followWallCalculatedSpeed *= (1 - (kP_velocity * velocityError));
 	
-//	Serial.print("Velocity error: ");
-//	Serial.println(velocityError);
+	Serial.print("Velocity error: ");
+	Serial.println(velocityError);
 
 	// let's go
 	drive(constrain(driveSpeed[MOTOR_LEFT], 0, 254), constrain(driveSpeed[MOTOR_RIGHT], 0, 254));
+	delay(10);
 }
 
 void FirefighterRobot::followWallRear(short direction, int optimalWallSensorReading) {
@@ -458,15 +457,14 @@ boolean FirefighterRobot::isSideWallLost(short direction) {
 	return false;
 }
 
+/**
+ * This will return 0 for distances greater than max distance -- be careful.
+ */
 float FirefighterRobot::getSonarWallDistance(sonarLocation loc) {
 	// Serial.print("Getting distance for sonar wall ");
 	// Serial.println(loc);
 
-	long microsec = sonar[loc]->timing();
-	//Serial.print("Microsec " );
-	//Serial.println(microsec);
-	
-	float wallDistance = sonar[loc]->convert(microsec, Ultrasonic::CM);
+	float wallDistance = sonar[loc]->ping_cm();
 	//Serial.print("Wall distance ");
 	//Serial.println(wallDistance);
 	
@@ -475,11 +473,11 @@ float FirefighterRobot::getSonarWallDistance(sonarLocation loc) {
 
 /**
  *	Returns the cm by which the left front sensor is farther away than the left
- *	rear sensor.
- *	After that basic trigonometry can be used to align the robot with the left wall.
+ *	rear sensor. After that basic trigonometry can be used to align the robot with the left wall.
+ *
+ *	For the right, we reverse front and rear.
  */
 float FirefighterRobot::getMisalignment(short direction) {
-	float maxDistanceValue = 100;
 	boolean readingFailed = false;
 
 	sonarLocation front = SONAR_LEFT_F;
@@ -489,47 +487,40 @@ float FirefighterRobot::getMisalignment(short direction) {
 		rear = SONAR_RIGHT_F;
 	}
 
-	long reading1 = 0;
-	long reading2 = 0;
+	float distance1 = 0;
 	
-	reading1 = sonar[front]->timing();
-	float distance1 = sonar[front]->convert(reading1, Ultrasonic::CM);
-	
-	// filter out bad values
+	// Filter out bad values. NewPing automatically returns 0 for distances past max distance set in
+	// constructor
 	short numRetries = 0;
-	while((distance1 > maxDistanceValue) && (numRetries < 5)) {
+	do {
 		delay(100);
-		reading1 = sonar[front]->timing();
-		distance1 = sonar[front]->convert(reading1, Ultrasonic::CM);
+		distance1 = sonar[front]->ping_cm();
 		numRetries++;
-	}
-	if(distance1 > maxDistanceValue) {
+	} while((distance1 < 0.01) && (numRetries < 5));
+
+	if(distance1 < 0.01) {
 		readingFailed = true;
 	}
 	
 	float distance2 = 0;
 	if(!readingFailed) {
 		delay(100);
-		
-		reading2 = sonar[rear]->timing();	
-		distance2 = sonar[rear]->convert(reading2, Ultrasonic::CM);
-	
+
 		numRetries = 0;
-		while((distance2 > maxDistanceValue) && (numRetries < 5)) {
+		do {
 			delay(100);
-			reading2 = sonar[rear]->timing();
-			distance2 = sonar[rear]->convert(reading1, Ultrasonic::CM);
+			distance2 = sonar[rear]->ping_cm();
 			numRetries++;
-		}	
-		if(distance2 > maxDistanceValue) {
+		} while((distance2 < 0.01) && (numRetries < 5));
+		if(distance2 < 0.01) {
 			readingFailed = true;
 		}
 	}
 	
-	Serial.print("Front distance ");
-	Serial.print(distance1);
-	Serial.print(" Rear distance ");
-	Serial.println(distance2);
+//	Serial.print("Front distance ");
+//	Serial.print(distance1);
+//	Serial.print(" Rear distance ");
+//	Serial.println(distance2);
 	
 	if(readingFailed) {
 		return ROBOT_NO_VALID_DATA;
@@ -543,54 +534,63 @@ float FirefighterRobot::getMisalignment(short direction) {
  *	possible or successful. Right now, no safety checks.
  */
 boolean FirefighterRobot::align(short direction) {
-  Serial.print("Aligning robot, side ");
-  Serial.println(direction);
- 
+	  Serial.print("Aligning robot, side ");
+	  Serial.println(direction);
+
+	  float theta = getMisalignmentAngle(direction);
+
+	  if(theta != ROBOT_NO_VALID_DATA) {
+		  if(fabs(theta) > 2 * DEG_TO_RAD) {
+			  turn(theta);
+		  }
+	  }
+	  stop();
+}
+/**
+ * What value do we need to plug into turn in order to get the robot
+ * facing parallel to the wall. Note the sign will be different on different
+ * sides.
+ *
+ * Returns ROBOT_NO_VALID_DATA if failed.
+ */
+float FirefighterRobot::getMisalignmentAngle(short direction) {
 	float sensorSpacing = 7.7;
 
  	float y = getMisalignment(direction);
  	
  	if((y == ROBOT_NO_VALID_DATA) || (y == 0)) {
  		Serial.println("Unable to get good data for alignment.");
- 		return false;
+ 		return ROBOT_NO_VALID_DATA;
  	}
  	
-  Serial.print("Raw diff: ");
-  Serial.println(y);
+//  Serial.print("Raw diff: ");
+//  Serial.println(y);
 
 	// got back garbage from diff function
  	if(fabs(y) > 160) {
- 		return false;
+ 		Serial.print("getMisalignment returned too high a value: ");
+ 		Serial.println(y);
+ 		return ROBOT_NO_VALID_DATA;
   }
   
   float theta = atan2(y, sensorSpacing);
   
-  Serial.print("diff: ");
-  Serial.println(y);
-  Serial.print("Raw theta: ");
-  Serial.println(theta);
+//  Serial.print("diff: ");
+//  Serial.println(y);
+//  Serial.print("Raw theta: ");
+//  Serial.println(theta);
       
-  if(fabs(y) > sensorSpacing) {
-  	// more than 45 degrees off
-  	Serial.println("Aligning more than 45..");
-  }    
-
-  theta *= (180.0 / M_PI);
+//  if(fabs(y) > sensorSpacing) {
+//  	// more than 45 degrees off
+//  	Serial.println("Aligning more than 45..");
+//  }
   
-  // my fudge
-  theta += 7;
+//  Serial.print("Aligned robot, side ");
+//  Serial.println(direction);
+//  Serial.print("Angle: ");
+//  Serial.println(theta);
   
-  if(fabs(theta) > 1) {
-	  turn(theta);
-	}
-  stop();
-  
-  Serial.print("Aligned robot, side ");
-  Serial.println(direction);
-  Serial.print("Angle: ");
-  Serial.println(theta);
-  
-  return true;
+  return theta;
 }
 
 float FirefighterRobot::getSideWallDistance(short direction) {
@@ -609,6 +609,47 @@ float FirefighterRobot::getSideWallDistance(short direction) {
 	
 	distance /= 2.0;
 	return distance;
+}
+
+/**
+ * This tells us the x-coordinate, in the robot frame, of the point where
+ * the IR sensor is contacting the wall. This will depend on the distance
+ * from the wall, the angle to the wall, and the relative position of the
+ * sensors on the robot.
+ */
+float FirefighterRobot::getIRWallForwardDistance(short direction) {
+	// see what the sensors say first
+	float theta = getMisalignmentAngle(direction);
+	if(theta == ROBOT_NO_VALID_DATA) {
+		Serial.println("Unable to determine wall angle for getIRWallForwardDistance, guessing.");
+		theta = 0;
+	}
+	theta *= -1.0;
+
+	float d_sonar_to_center = 6.0;
+	float d_sonar_to_ir = 7.4; // D
+	float x_position_ir = 6.3;  // E
+	float beta = 3 * DEG_TO_RAD;
+	float gamma = 47 * DEG_TO_RAD;
+
+	// another sensor call
+	float d_sonar_to_wall = getSideWallDistance(direction); // dm
+	if(d_sonar_to_wall < 0.01) {
+		Serial.println("Unable to determine wall distance for getIRWallForwardDistance, guessing.");
+		d_sonar_to_wall = 23 - d_sonar_to_center;
+	}
+
+	// some derived values we'll need
+	float distance_ir_to_wall = d_sonar_to_wall + (d_sonar_to_ir * sin(beta)) + (x_position_ir * tan(theta)); //dIR
+	// theTanThing blows up for theta = 90, as one would expect physically
+	float theTanThing = tan(0.5*(90 - theta - (2.0 * gamma))) / tan(0.5*(90 - theta));
+
+	float x0 = (d_sonar_to_center + d_sonar_to_wall);
+	float x1 = x_position_ir / cos(theta);
+	float x2 = (distance_ir_to_wall * (1 - theTanThing)) / (1 + theTanThing);
+
+	float x = x0 + x1 + x2;
+	return x;
 }
 
 float FirefighterRobot::getFireReading() {
@@ -776,15 +817,16 @@ int FirefighterRobot::panServoForFire(int startDegree, int endDegree, boolean bN
 void FirefighterRobot::fightFire() {
 	resetStallWatcher();
 
-	// drive to candle, re-centering every 30 cm
+	// drive to candle, re-centering every 25 cm
 	while((getFrontWallDistance() > 25) && (!isStalled())) {
 		resetStallWatcher();
 		resetOdometers();
 
-		odom.setGoalPosition(0, 0);
+		odom.setGoalPosition(0, 0);	// not really our goal...a place holder
 		odom.update();
 		while((!isStalled()) && (getFrontWallDistance() > 25) && (odom.getDistanceToGoal() < 25)) {
-			drive(moveSpeed, moveSpeed);
+			// drive(moveSpeed, moveSpeed);
+			move(1, 0, false);	// make sure we hang onto our goal point
 			delay(75);
 			odom.update();
  	 	}	
@@ -799,7 +841,7 @@ void FirefighterRobot::fightFire() {
 	 	 	}
 	 	 	if(degreesOff != ROBOT_NO_FIRE_FOUND) {
 		 	 	if(fabs(degreesOff) > 5) {
-	 		 		turn(degreesOff);
+	 		 		turn(degreesOff * DEG_TO_RAD);
 	 		 		delay(250);
 	 		 	}
 	 		}

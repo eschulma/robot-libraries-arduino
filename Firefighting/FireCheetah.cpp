@@ -14,11 +14,11 @@ WheelEncoder robotEncoder[2] = { WheelEncoder(ENCODER_LEFT_A_PIN, ENCODER_LEFT_B
 									),
 								WheelEncoder(ENCODER_RIGHT_A_PIN, ENCODER_RIGHT_B_PIN,
 									FAULHABER_COUNTS_PER_REVOLUTION) };
-Ultrasonic robotSonar[5] = { Ultrasonic(SONAR_FORWARD_TRIGGER_PIN, SONAR_FORWARD_ECHO_PIN), 
-							Ultrasonic(SONAR_LEFT_F_TRIGGER_PIN, SONAR_LEFT_F_ECHO_PIN),
-							Ultrasonic(SONAR_LEFT_R_TRIGGER_PIN, SONAR_LEFT_R_ECHO_PIN),
-							Ultrasonic(SONAR_RIGHT_F_TRIGGER_PIN, SONAR_RIGHT_F_ECHO_PIN),
-							Ultrasonic(SONAR_RIGHT_R_TRIGGER_PIN, SONAR_RIGHT_R_ECHO_PIN) };		
+NewPing robotSonar[5] = { NewPing(SONAR_FORWARD_TRIGGER_PIN, SONAR_FORWARD_ECHO_PIN, 40),
+		NewPing(SONAR_LEFT_F_TRIGGER_PIN, SONAR_LEFT_F_ECHO_PIN, 40),
+		NewPing(SONAR_LEFT_R_TRIGGER_PIN, SONAR_LEFT_R_ECHO_PIN, 40),
+		NewPing(SONAR_RIGHT_F_TRIGGER_PIN, SONAR_RIGHT_F_ECHO_PIN, 40),
+		NewPing(SONAR_RIGHT_R_TRIGGER_PIN, SONAR_RIGHT_R_ECHO_PIN, 40) };
 																
 StallWatcher robotStallWatcher(&robotEncoder[0], &robotEncoder[1]);
 
@@ -98,6 +98,9 @@ void FireCheetah::setup() {
 	bangBangDelta = floor(40.0 / batteryChargeLevel);
 	moveSpeed = 65; // 90;
 	turnSpeed = 30;
+
+	// these evolve over time
+	followWallCalculatedSpeed = followWallSpeed;
 
 	// Target velocities, in units of cm/s or rad/s. 1 cm = 0.39 inches, 1 rad ~ 57 degrees
 	targetMoveVelocity = 15.0;

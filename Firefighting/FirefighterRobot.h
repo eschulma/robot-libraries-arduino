@@ -5,7 +5,7 @@
 #include <Motor.h>
 #include <WheelEncoder.h>
 #include <math.h>
-#include <Ultrasonic.h>
+#include <NewPing.h>
 #include <StallWatcher.h>
 #include <Servo.h>
 #include <Odometer.h>
@@ -30,7 +30,7 @@ class FirefighterRobot {
 	protected:
 		ControllerMotor *motor[2];
 		WheelEncoder *encoder[2];
-		Ultrasonic *sonar[5];
+		NewPing *sonar[5];
 		StallWatcher* stallWatcher;
 		Servo fanServo;
 
@@ -53,6 +53,7 @@ class FirefighterRobot {
 		int moveSpeed;
 		int turnSpeed;
 		int followWallSpeed;
+		float followWallCalculatedSpeed;
 		float targetMoveVelocity;
 		float targetFollowVelocity;
 		float targetAngularVelocity;
@@ -109,10 +110,12 @@ class FirefighterRobot {
 		void followWallRear(short direction, int idealWallSensorReading);
 		float getFollowWallSpeed() { return followWallSpeed; };
 		float getMoveSpeed() { return moveSpeed; };
+		float getIRWallForwardDistance(short direction);
 		
 		boolean isSideWallLost(short direction);
 		float getFrontWallDistance() { float value = getSonarWallDistance(SONAR_FRONT); return value; }
 		float getSideWallDistance(short direction);
+		float getMisalignmentAngle(short direction);
 		
 		void alignLeft() { align(ROBOT_LEFT); };
 		void alignRight() { align(ROBOT_RIGHT); };
@@ -122,6 +125,7 @@ class FirefighterRobot {
 		void resetOdometers() { odom.reset(); };
 
 		float getTrackWidth() { return trackWidth; };
+		float getFollowWallCalculatedSpeed() { return followWallCalculatedSpeed; };
 
 		FirefighterRobot();
 		

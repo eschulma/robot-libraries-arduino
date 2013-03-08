@@ -23,30 +23,38 @@ void testWallLoss() {
 }
 
 void testWallFollowing() {
-  long start = millis();
-  long numFollows = 0;
   int wallSide = ROBOT_LEFT;
+  float stopFrontDistance = 23 - ((robot->getTrackWidth())/2.0);
 
   robot->initDesiredWallSensorReadings(wallSide);
   robot->resetOdometers();
   robot->resetStallWatcher();
-  robot->followWallSpeed = 70;
   
   while(!robot->isSideWallLost(wallSide)) {
+	// don't give up with stalls until we've reached maximum torque
+	if(robot->isStalled()) {
+		if(robot->getFollowWallCalculatedSpeed() > 200) {
+			Serial.println("We stalled!");
+			break;
+		}
+	}
+	float frontWallDistance = robot->getFrontWallDistance();
+	if((frontWallDistance > 0) && (frontWallDistance < stopFrontDistance)) {
+		Serial.println("Forward wall detected.");
+		break;
+	}
     robot->followWall(wallSide);
-    numFollows++;
+    delay(50);	// so pings don't collide
   }    
   float lossDistanceReading = robot->getSideWallDistanceReading(wallSide);
   robot->stop();
-  long end = millis();
-  Serial.print("Lost wall at wall distance ");
+
+  Serial.print("Lost wall at side wall distance ");
   Serial.println(lossDistanceReading);
-  Serial.print("numFollows: ");
-  Serial.println(numFollows);
-  if((end - start) > 0) {
-    Serial.print("numFollows frequency: ");
-    Serial.println((numFollows * 1000.0)/(end - start));
-  }
+  Serial.print("Front wall distance ");
+  Serial.println(robot->getFrontWallDistance());
+  Serial.print("IR point along wall: ");
+  Serial.println(robot->getIRWallForwardDistance(wallSide));
 }
 
 void testFireSensors() {
@@ -59,7 +67,7 @@ void testFireSensors() {
 }
 
 void testEncoders() {
-	// robot->drive(100, 100);
+	robot->drive(100, 100);
 
 	long leftTicks = 0;
 	long rightTicks = 0;
@@ -131,18 +139,10 @@ void testCircling() {
 }
 
 void testTurning() {
-  // robot->move(50);
-  // delay(2000);
-  robot->turn(-90);
-  delay(2000);
-  robot->turn(90);
-}
-
-void testTurnToHeading() {
   long leftTicks, rightTicks;
   robot->resetOdometers();
 
-  robot->turnToHeading(PI/2.0);
+  robot->turn(PI/2.0);
   robot->stop();
   leftTicks = robot->getOdometerValue(ROBOT_LEFT);
   rightTicks = robot->getOdometerValue(ROBOT_RIGHT);
@@ -161,7 +161,7 @@ void testTurnToHeading() {
   Serial.print("     right ticks: ");
   Serial.println(rightTicks);
 
-  robot->turnToHeading(-PI/2.0);
+  robot->turn(-PI/2.0);
   robot->stop();
 
   leftTicks = robot->getOdometerValue(ROBOT_LEFT);
@@ -184,58 +184,81 @@ void testTurnToHeading() {
   robot->stop();
 }
 
-void testMoving() {
+void testMovingOld() {
 	robot->resetOdometers();
 	robot->move(15);
 	robot->stop();
 }
 
-void testMovingToGoal() {
+void testMoving() {
+	printPosition();
+	robot->move(20, 0);
+
+	robot->stop();
+	printPosition();
+}
+
+void printPosition() {
+  Serial.print("Current position: ");
+  Serial.print(robot->odom.getX());
+  Serial.print("     ");
+  Serial.println(robot->odom.getY());
+
+  Serial.print("Current pose (degrees): ");
+  Serial.println(robot->odom.getHeading() * RAD_TO_DEG);
+}
+
+void printEncoderTicks() {
+	  long leftTicks = robot->getOdometerValue(ROBOT_LEFT);
+	  long rightTicks = robot->getOdometerValue(ROBOT_RIGHT);
+
+	  Serial.print("left ticks: ");
+	  Serial.print(leftTicks);
+	  Serial.print("     right ticks: ");
+	  Serial.println(rightTicks);
+}
+
+void testGoToGoal() {
   robot->resetOdometers();
-  // robot->moveStopDistance = 0;
-  // robot->moveSpeed = 40;
-  robot->goToGoal(10, 0);
 
-  long leftTicks = robot->getOdometerValue(ROBOT_LEFT);
-  long rightTicks = robot->getOdometerValue(ROBOT_RIGHT);
+  printPosition();
+  robot->goToGoal(20, -20);
+  printPosition();
   
-  Serial.print("left ticks: ");
-  Serial.print(leftTicks);
-  Serial.print("     right ticks: ");
-  Serial.println(rightTicks);
-
   robot->stop();
-  leftTicks = robot->getOdometerValue(ROBOT_LEFT);
-  rightTicks = robot->getOdometerValue(ROBOT_RIGHT);
-  Serial.println("Ticks right after stop: ");
-  Serial.print("left ticks: ");
-  Serial.print(leftTicks);
-  Serial.print("     right ticks: ");
-  Serial.println(rightTicks);
   
   delay(2000);
-  rightTicks = robot->getOdometerValue(ROBOT_RIGHT);
-  leftTicks = robot->getOdometerValue(ROBOT_LEFT);
-  Serial.println("Ticks after delay: ");
-  Serial.print("left ticks: ");
-  Serial.print(leftTicks);
-  Serial.print("     right ticks: ");
-  Serial.println(rightTicks);
+  Serial.println("\nAfter first goal: ");
+  printPosition();
+  printEncoderTicks();
+
+  robot->goToGoal(40, 0);
+  robot->stop();
+  printPosition();
 }
 
 void testFrontSonar() {
 	while(1) {
-		delay(500);
+		delay(250);
 		Serial.println(robot->getFrontWallDistance());
 	}
 }
 
-void testIndividualSonar() {
+void testSonarPair() {
+	Serial.println("Testing sonar right.");
+
+	sonarLocation front = SONAR_RIGHT_F;
+	sonarLocation rear = SONAR_RIGHT_R;
+
 	while(1) {
-		delay(500);
-		long timing = robot->sonar[SONAR_LEFT_F]->timing();
-		float distance1 = robot->sonar[SONAR_LEFT_F]->convert(timing, Ultrasonic::CM);
-		Serial.println(distance1);
+		float distanceF = robot->sonar[front]->ping_cm();
+		delay(100);
+		float distanceR = robot->sonar[rear]->ping_cm();
+		delay(100);
+
+		Serial.print(distanceF);
+		Serial.print("    ");
+		Serial.println(distanceR);
 	}
 }
 
@@ -269,7 +292,7 @@ void testAlignmentReadings() {
 }
 
 void testAligning() {
-  robot->align(ROBOT_LEFT);
+  robot->align(ROBOT_RIGHT);
 }
 
 /**
@@ -395,7 +418,7 @@ void testPutOutFire() {
 	
 		// face the right direction
 		robot->setFanServo(0);
-		robot->turn(degrees);
+		robot->turn(degrees * DEG_TO_RAD);
 		delay(500);
 		
 		robot->fightFire();
@@ -409,17 +432,17 @@ void testApproachAndPan() {
     delay(75);
   } */
   robot->stop();  
-  robot->turn(90);
+  robot->turn(90 * DEG_TO_RAD);
   delay(500);
-  robot->turn(-180);
+  robot->turn(-180 * DEG_TO_RAD);
   delay(500);
-  robot->turn(180);
+  robot->turn(180 * DEG_TO_RAD);
   delay(500);
-  robot->turn(-180);
+  robot->turn(-180 * DEG_TO_RAD);
   delay(500);
-  robot->turn(180);
+  robot->turn(180 * DEG_TO_RAD);
   delay(500);
-  robot->turn(-90);
+  robot->turn(-90 * DEG_TO_RAD);
 }
 
 };
