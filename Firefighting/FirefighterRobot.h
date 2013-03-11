@@ -50,14 +50,18 @@ class FirefighterRobot {
 		
 		float batteryChargeLevel;	
 
-		int moveSpeed;
-		int turnSpeed;
-		int followWallSpeed;
-		float followWallCalculatedSpeed;
+		short maxAllowedPWM;
+		short movePWM;
+		short turnPWM;
+		short followWallPWM;
+
+		// keep these floating point, important
+		float followWallCalculatedPWM;
+		float moveCalculatedPWM;
+
 		float targetMoveVelocity;
 		float targetFollowVelocity;
 		float targetAngularVelocity;
-		int bangBangDelta;
 		short moveMotorIndex;
 
 		boolean turnOneWheelOnly;
@@ -74,6 +78,8 @@ class FirefighterRobot {
 		boolean align(short direction);
 		float getMisalignment(short direction);
 		
+		void followWall(short direction, float velocityFactor, int idealWallSensorReading);
+
 		int panServoForFire(int startDegree, int endDegree, boolean bNearby);
 		
 		float getFireReading();
@@ -85,7 +91,7 @@ class FirefighterRobot {
 
 		void stop();
 		void drive(int velocityLeft, int velocityRight);
-		boolean move(double forward, double left, boolean resetWorldFrameToRobot = true);
+		boolean move(double x, double y, boolean inRobotFrame = true);
 		boolean goToGoal(double goalX, double goalY);
 		boolean turn(double deltaHeading);
 		void move(float distance);	// go this distance in a straight line, forward or back only DEPRECATED
@@ -101,15 +107,14 @@ class FirefighterRobot {
 		boolean isStalled() { return stallWatcher->isStalled(); };
 		void resetStallWatcher() { stallWatcher->reset(); };
 		
-		// determines if we do PID or bang-bang
-		void followWall(short direction, int idealWallSensorReading);
+		void driveTowardGoal(float velocityFactor = 1.0, boolean goBackwards = false);
 
 		void initDesiredWallSensorReadings(short direction);
-		void followWall(short direction) { 	followWall(direction, desiredWallSensorReading[direction]); };	
+		void followWall(short direction, float velocityFactor = 1.0) { 	followWall(direction, velocityFactor, desiredWallSensorReading[direction]); };
 		void followWallRear(short direction) { 	followWallRear(direction, desiredWallSensorReading[direction]); };	
 		void followWallRear(short direction, int idealWallSensorReading);
-		float getFollowWallSpeed() { return followWallSpeed; };
-		float getMoveSpeed() { return moveSpeed; };
+		float getFollowWallSpeed() { return followWallPWM; };
+		float getMoveSpeed() { return movePWM; };
 		float getIRWallForwardDistance(short direction);
 		
 		boolean isSideWallLost(short direction);
@@ -125,10 +130,12 @@ class FirefighterRobot {
 		void resetOdometers() { odom.reset(); };
 
 		float getTrackWidth() { return trackWidth; };
-		float getFollowWallCalculatedSpeed() { return followWallCalculatedSpeed; };
+		float getFollowWallCalculatedSpeed() { return followWallCalculatedPWM; };
 
 		FirefighterRobot();
-		
+
+#ifdef FIREFIGHTER_TEST
 		friend class RobotTester;	// for testing
+#endif
 };
 #endif

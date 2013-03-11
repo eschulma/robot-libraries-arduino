@@ -38,6 +38,8 @@ class FireCheetah : public FirefighterRobot {
 		FireCheetah();
 		void setup();
 		
+#ifdef FIREFIGHTER_TEST
 		friend class RobotTester;	// for testing
+#endif
 };
 #endif

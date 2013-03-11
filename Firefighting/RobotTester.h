@@ -147,19 +147,13 @@ void testTurning() {
   leftTicks = robot->getOdometerValue(ROBOT_LEFT);
   rightTicks = robot->getOdometerValue(ROBOT_RIGHT);
   Serial.println("Ticks right after stop: ");
-  Serial.print("left ticks: ");
-  Serial.print(leftTicks);
-  Serial.print("     right ticks: ");
-  Serial.println(rightTicks);
+  printEncoderTicks();
 
-  delay(2000);
+  /* delay(2000);
   rightTicks = robot->getOdometerValue(ROBOT_RIGHT);
   leftTicks = robot->getOdometerValue(ROBOT_LEFT);
   Serial.println("Ticks after delay: ");
-  Serial.print("left ticks: ");
-  Serial.print(leftTicks);
-  Serial.print("     right ticks: ");
-  Serial.println(rightTicks);
+  printEncoderTicks();
 
   robot->turn(-PI/2.0);
   robot->stop();
@@ -167,19 +161,12 @@ void testTurning() {
   leftTicks = robot->getOdometerValue(ROBOT_LEFT);
   rightTicks = robot->getOdometerValue(ROBOT_RIGHT);
   Serial.println("Ticks right after stop: ");
-  Serial.print("left ticks: ");
-  Serial.print(leftTicks);
-  Serial.print("     right ticks: ");
-  Serial.println(rightTicks);
+  printEncoderTicks();
 
   delay(2000);
   rightTicks = robot->getOdometerValue(ROBOT_RIGHT);
   leftTicks = robot->getOdometerValue(ROBOT_LEFT);
-  Serial.println("Ticks after delay: ");
-  Serial.print("left ticks: ");
-  Serial.print(leftTicks);
-  Serial.print("     right ticks: ");
-  Serial.println(rightTicks);
+  printEncoderTicks(); */
 
   robot->stop();
 }
@@ -195,6 +182,17 @@ void testMoving() {
 	robot->move(20, 0);
 
 	robot->stop();
+	printPosition();
+
+	delay(500);
+
+	robot->move(0, 20);
+	printPosition();
+
+	robot->stop();
+	printPosition();
+
+	delay(500);
 	printPosition();
 }
 

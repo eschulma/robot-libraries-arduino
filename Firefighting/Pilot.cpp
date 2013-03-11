@@ -107,14 +107,14 @@ int Pilot::setCourse() {
 	if((currentNode.id == 4) && (nextNode.id == 7)) {
 		robot->resetOdometers();
 		robot->resetStallWatcher();
-		robot->odom.setGoalPosition(0, 0);
+		robot->odom.markPosition();
 		robot->odom.update();
 		
 		// ((46.0 + 8.5)/2.0) - 6.25
 		float nudgeDistance = 21.25;
 		Serial.print("Nudging along wall ");
 		Serial.println(nudgeDistance);		
-		while((robot->odom.getDistanceToGoal() < nudgeDistance) && (!robot->isStalled())) {
+		while((robot->odom.getDistanceFromMarkedPoint() < nudgeDistance) && (!robot->isStalled())) {
 			robot->followWall(ROBOT_LEFT);
 			robot->odom.update();
 		}
@@ -127,10 +127,10 @@ int Pilot::setCourse() {
 			robot->alignLeft();
 			delay(500);
 			
-			robot->odom.setGoalPosition(0, 0);
+			robot->odom.markPosition();
 			robot->odom.update();
 
-			while((robot->odom.getDistanceToGoal() < nudgeDistance) && (!robot->isStalled())) {
+			while((robot->odom.getDistanceFromMarkedPoint() < nudgeDistance) && (!robot->isStalled())) {
 				robot->followWall(ROBOT_LEFT);
 				robot->odom.update();
 			}			
@@ -325,7 +325,7 @@ int Pilot::setCourse() {
 	robot->resetOdometers();
 	robot->resetStallWatcher();
 	// done so getDistanceTravelled is accurate:
-	robot->odom.setGoalPosition(0,0);
+	robot->odom.markPosition();
 	robot->odom.update();
 	
 	Serial.print("For path index ");
@@ -380,23 +380,22 @@ void Pilot::changeHeading(mazeHeading currentHeading, mazeHeading newHeading) {
 }
 
 int Pilot::go() {	
-	// TODO: if we are following a wall or moving and haven't reached full power yet, keep going
+	// TODO: if we are following a wall or moving and haven't reached full power (use fabs), keep going
 	if(robot->isStalled()) {
 		robot->recover();
 		robot->turn(-30 * DEG_TO_RAD);
 		robot->stop();
 	}
 
-	// TODO: find replacement -- and moveStopDistance can be much smaller
-	float moveStopDistance = 8;
-	const float desiredWallDistance = ((46-robot->getTrackWidth()) / 2.0) + 2;
+	float moveStopDistance = 0;
+	const float desiredWallDistance = ((hallwayWidth - robot->getTrackWidth()) / 2.0) + 2;
 	
-	if((followMethod == PILOT_FOLLOW_LEFT) || (followMethod == PILOT_FOLLOW_RIGHT)) {
-		moveStopDistance += 10; // 2.0 * robot->getMoveStopDistance();
-	}
+//	if((followMethod == PILOT_FOLLOW_LEFT) || (followMethod == PILOT_FOLLOW_RIGHT)) {
+//		moveStopDistance += 10; // 2.0 * robot->getMoveStopDistance();
+//	}
 
 	robot->odom.update();
-	float distanceTravelled = fabs(robot->odom.getDistanceToGoal());
+	float distanceTravelled = fabs(robot->odom.getDistanceFromMarkedPoint());
 	
 	// straight distance check first
 	if(nodeCheck == PILOT_CHECK_DISTANCE) {
@@ -410,7 +409,7 @@ int Pilot::go() {
 	
 	long sensorPause = 5;
 	if(nodeCheck == PILOT_CHECK_FORWARD) {
-		sensorPause = 100;
+		sensorPause = 100; // time for the ultrasonic reading itself, +50
 	}
 			
 	// if we are approaching the next node
@@ -603,7 +602,7 @@ float Pilot::nudgeToAlign(short wallDirection) {
 	
 	// TODO: if watcher stalled, do some recovery
 	
-	distance += robot->odom.getDistanceToGoal();
+	distance += robot->odom.getDistanceFromMarkedPoint();
 	
 	return distance;
 }

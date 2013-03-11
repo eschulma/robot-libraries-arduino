@@ -56,8 +56,8 @@ void FireCheetah::setup() {
 	pinMode(START_BUTTON_PIN, INPUT);
 	digitalWrite(START_BUTTON_PIN, LOW);
 
-	wheelDiameter[ROBOT_LEFT] = 7.5; // cm, measured
-	wheelDiameter[ROBOT_RIGHT] = 7.4; // wheelDiameter[ROBOT_LEFT] ; //* 1.02;	// cm
+	wheelDiameter[ROBOT_LEFT] = 6.8; // 7.5; // cm, measured
+	wheelDiameter[ROBOT_RIGHT] = 6.7; // 7.4; // wheelDiameter[ROBOT_LEFT] ; //* 1.02;	// cm
 
 	// motors and encoders do their own job of setting pins input/output if setup called
 	boolean isMotorForward[2] = {false, true};
@@ -71,7 +71,7 @@ void FireCheetah::setup() {
 	turnOneWheelOnly = true;
 	turnFudgeFactor = 1.0;
 
-	trackWidth = 18.4; // 17.7; // outer distance, measured
+	trackWidth = 17.7; // outer distance, measured
 	odom.setup(encoder, isMotorForward, wheelDiameter, (double)trackWidth);
 
 	moveMotorIndex = MOTOR_RIGHT;
@@ -93,14 +93,16 @@ void FireCheetah::setup() {
 	moveSpeed = floor(40.0 / batteryChargeLevel);
 	turnSpeed = floor(40.0 / batteryChargeLevel); */
 
+	maxAllowedPWM = 253; // must be LESS than 254
+
 	// 9V values
-	followWallSpeed = 90;
-	bangBangDelta = floor(40.0 / batteryChargeLevel);
-	moveSpeed = 65; // 90;
-	turnSpeed = 30;
+	followWallPWM = 90;
+	movePWM = 65; // 90;
+	turnPWM = 30;
 
 	// these evolve over time
-	followWallCalculatedSpeed = followWallSpeed;
+	followWallCalculatedPWM = followWallPWM;
+	moveCalculatedPWM = movePWM;
 
 	// Target velocities, in units of cm/s or rad/s. 1 cm = 0.39 inches, 1 rad ~ 57 degrees
 	targetMoveVelocity = 15.0;
