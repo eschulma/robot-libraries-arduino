@@ -91,10 +91,12 @@ class FirefighterRobot {
 
 		void stop();
 		void drive(int velocityLeft, int velocityRight);
+		void driveTowardGoal(float velocityFactor = 1.0, boolean goBackwards = false);
 		boolean move(double x, double y, boolean inRobotFrame = true);
 		boolean goToGoal(double goalX, double goalY);
 		boolean turn(double deltaHeading);
 		void move(float distance);	// go this distance in a straight line, forward or back only DEPRECATED
+
 		void setFanServo(short degrees);	// 0 is pointing forward
 		void turnFanOn(boolean on);
 		int panServoForFire();
@@ -107,8 +109,6 @@ class FirefighterRobot {
 		boolean isStalled() { return stallWatcher->isStalled(); };
 		void resetStallWatcher() { stallWatcher->reset(); };
 		
-		void driveTowardGoal(float velocityFactor = 1.0, boolean goBackwards = false);
-
 		void initDesiredWallSensorReadings(short direction);
 		void followWall(short direction, float velocityFactor = 1.0) { 	followWall(direction, velocityFactor, desiredWallSensorReading[direction]); };
 		void followWallRear(short direction) { 	followWallRear(direction, desiredWallSensorReading[direction]); };	
@@ -128,6 +128,7 @@ class FirefighterRobot {
 		long getOdometerValue(short motorIndex) { return motor[motorIndex]->getOdometerValue(); };
 		// void resetOdometer(short direction) { motor[direction].resetOdometer(); };
 		void resetOdometers() { odom.reset(); };
+		void resetCalculatedMovePWMs();
 
 		float getTrackWidth() { return trackWidth; };
 		float getFollowWallCalculatedSpeed() { return followWallCalculatedPWM; };

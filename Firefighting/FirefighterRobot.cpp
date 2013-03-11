@@ -110,6 +110,9 @@ boolean FirefighterRobot::goToGoal(double goalX, double goalY) {
 	stallWatcher->reset();
 	odom.update();
 
+	// make sure we start at a reasonable speed
+	resetCalculatedMovePWMs();
+
 	do {
 		driveTowardGoal(velocityFactor);
 
@@ -902,6 +905,11 @@ void FirefighterRobot::fightFire() {
   
   turnFanOn(false);
   setFanServo(0);
+}
+
+void FirefighterRobot::resetCalculatedMovePWMs() {
+	moveCalculatedPWM = movePWM;
+	followWallCalculatedPWM = followWallPWM;
 }
 
 void FirefighterRobot::recover() {

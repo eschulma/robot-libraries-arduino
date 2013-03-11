@@ -101,8 +101,7 @@ void FireCheetah::setup() {
 	turnPWM = 30;
 
 	// these evolve over time
-	followWallCalculatedPWM = followWallPWM;
-	moveCalculatedPWM = movePWM;
+	resetCalculatedMovePWMs();
 
 	// Target velocities, in units of cm/s or rad/s. 1 cm = 0.39 inches, 1 rad ~ 57 degrees
 	targetMoveVelocity = 15.0;

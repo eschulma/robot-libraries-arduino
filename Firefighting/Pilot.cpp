@@ -327,6 +327,8 @@ int Pilot::setCourse() {
 	// done so getDistanceTravelled is accurate:
 	robot->odom.markPosition();
 	robot->odom.update();
+	// make sure we start at a reasonable speed
+	robot->resetCalculatedMovePWMs();
 	
 	Serial.print("For path index ");
 	Serial.println(pathIndex - 1);
