@@ -42,17 +42,19 @@ void Odometer::setup(WheelEncoder* inEncoder[2], boolean isEncoderForward[2], do
 	goalY = 0.0;
 	vLeft = 0.0;
 	vRight = 0.0;
+	markX = 0.0;
+	markY = 0.0;
 
 	// turnFudgeFactor = 1.0;
 
 	trackWidth = inTrackWidth;
 
-	Serial.print("DistancePerCount[0]:  ");
-	Serial.println(distancePerCount[0]);
-	Serial.print("trackWidth:  ");
-	Serial.println(trackWidth);
-	Serial.print("countsPerRevolution[0]:  ");
-	Serial.println(countsPerRevolution[0]);
+//	Serial.print("DistancePerCount[0]:  ");
+//	Serial.println(distancePerCount[0]);
+//	Serial.print("trackWidth:  ");
+//	Serial.println(trackWidth);
+//	Serial.print("countsPerRevolution[0]:  ");
+//	Serial.println(countsPerRevolution[0]);
 
 	reset();
 }
@@ -71,6 +73,7 @@ void Odometer::reset() {
 
 void Odometer::setCurrentPosition(double x, double y, double inHeading) {
 	reset();
+
 	X = x;
 	Y = y;
 	heading = inHeading;
@@ -79,10 +82,32 @@ void Odometer::setCurrentPosition(double x, double y, double inHeading) {
 }
 
 void Odometer::setGoalPosition(double x, double y) {
+	Serial.print("New goal: ");
+	Serial.print(x);
+	Serial.print(", ");
+	Serial.println(y);
+
 	goalX = x;
 	goalY = y;
 	targetHeading = calculateGoalHeading();
 }
+
+/**
+ * Convenient way to "save" a point in the world frame.
+ */
+void Odometer::markPosition(double x, double y) {
+	markX = x;
+	markY = y;
+}
+
+/**
+ * Convenient way to "save" the current location in the world frame.
+ */
+void Odometer::markPosition() {
+	markX = X;
+	markY = Y;
+}
+
 
 /**
  *	Update our position and heading, based on changes in encoder values and the previous heading.
@@ -267,7 +292,15 @@ double Odometer::getDistanceToGoal() {
 //	Serial.print("y distance: ");
 //	Serial.println(GoalY - Y);
 
-	return sqrt(pow(goalX - X, 2) + pow(goalY - Y, 2));
+	return getDistanceBetweenPoints(X, Y, goalX, goalY);
+}
+
+double Odometer::getDistanceFromMarkedPoint() {
+	return getDistanceBetweenPoints(X, Y, markX, markY);
+}
+
+double Odometer::getDistanceBetweenPoints(double x1, double y1, double x2, double y2) {
+	return sqrt(pow(x1 - x2, 2) + pow(y1 - y2, 2));
 }
 
 ///**
@@ -286,15 +319,23 @@ double Odometer::getDistanceToGoal() {
  * (the world frame).
  */
 void Odometer::transformRobotPointToOdomPoint(double *x, double *y) {
-	// first rotate, then translate
-	double theta = -heading;
-	double xworld = (*x * cos(theta)) - (*y * sin(theta));
-	double yworld = (*x * sin(theta)) + (*y * cos(theta));
+	return transformPoint(x, y, X, Y, heading);
+}
+
+// TODO: do we always rotate then translate, or not?
+void Odometer::transformPoint(double *x, double *y, double deltaX, double deltaY, double deltaHeading) {
+	// rotate
+	double xnew = *x;
+	double ynew = *y;
+
+	// rotate
+	xnew = (xnew * cos(deltaHeading)) - (ynew * sin(deltaHeading));
+	ynew = (xnew * sin(deltaHeading)) + (ynew * cos(deltaHeading));
 
 	// translate
-	xworld += X;
-	yworld += Y;
+	xnew += deltaX;
+	ynew += deltaY;
 
-	*x = xworld;
-	*y = yworld;
+	*x = xnew;
+	*y = ynew;
 }

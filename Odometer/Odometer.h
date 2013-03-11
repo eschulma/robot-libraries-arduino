@@ -24,10 +24,14 @@ public:
 
 	void setGoalPosition(double x, double y);
 	void setTargetHeading(double inHeading) { targetHeading = inHeading; }; // used for turn function
+	void markPosition();
+	void markPosition(double x, double y);
 
 	void setCurrentPosition(double x, double y, double heading);
 
 	void transformRobotPointToOdomPoint(double *x, double *y);
+	static void transformPoint(double *x, double *y, double deltaX, double deltaY, double deltaHeading);
+
 	// used for remote control
 	void translateToLeftRightVelocities(float *newLeft, float *newRight, float commandedVelocity, float commandedAngularVelocity);
 
@@ -36,7 +40,11 @@ public:
 	double calculateGoalHeading();
 	double getHeadingError();
 	double getHeadingError(double goalHeading);
+
+	static double getDistanceBetweenPoints(double x1, double y1, double x2, double y2);
 	double getDistanceToGoal();
+	double getDistanceFromMarkedPoint();
+
 	double getLinearVelocity();
 	double getAngularVelocity() const { return omega; };
 
@@ -44,6 +52,8 @@ public:
 	double getGoalY() const { return goalY; }
 	double getX() const { return X; }
 	double getY() const { return Y; }
+	double getMarkX() const { return markX; }
+	double getMarkY() const { return markY; }
 //	double getVLeft() const { return vLeft; };
 //	double getVRight() const { return vRight; };
 
@@ -63,6 +73,8 @@ private:
 
 	double goalX;
 	double goalY;
+	double markX;
+	double markY;
 	double targetHeading;
 
 	// filled by update
