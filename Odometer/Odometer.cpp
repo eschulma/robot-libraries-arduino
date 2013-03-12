@@ -322,7 +322,9 @@ void Odometer::transformRobotPointToOdomPoint(double *x, double *y) {
 	return transformPoint(x, y, X, Y, heading);
 }
 
-// TODO: do we always rotate then translate, or not?
+/*
+ * Rotate, then translate...deltaX is "x in new frame - x in old frame" etc.
+ */
 void Odometer::transformPoint(double *x, double *y, double deltaX, double deltaY, double deltaHeading) {
 	// rotate
 	double xnew = *x;
