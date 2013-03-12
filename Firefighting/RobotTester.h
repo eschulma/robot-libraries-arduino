@@ -173,7 +173,7 @@ void testTurning() {
 
 void testMovingOld() {
 	robot->resetOdometers();
-	robot->move(15);
+	robot->backUp(15);
 	robot->stop();
 }
 

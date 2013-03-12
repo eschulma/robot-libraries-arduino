@@ -95,7 +95,7 @@ class FirefighterRobot {
 		boolean move(double x, double y, boolean inRobotFrame = true);
 		boolean goToGoal(double goalX, double goalY);
 		boolean turn(double deltaHeading);
-		void move(float distance);	// go this distance in a straight line, forward or back only DEPRECATED
+		void backUp(float distance);	// go this distance in a straight line, forward or back only DEPRECATED
 
 		void setFanServo(short degrees);	// 0 is pointing forward
 		void turnFanOn(boolean on);

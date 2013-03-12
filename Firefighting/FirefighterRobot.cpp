@@ -341,34 +341,41 @@ boolean FirefighterRobot::turn(double headingChange) {
 }
 
 /**
- *	Move the robot a short distance straight forward (or back), based on the encoder value
+ *	Move the robot a short distance straight back, based on the encoder value
  *	for one motor. There is no error correction if the robot drifts to the side.
- *	Positive moves forward.
+ *	Both positive and negative input values move the robot backwards!
  *
  *	The caller is responsible for calling stop() after the function, otherwise the bot
  *	will keep moving.
  *
- *	NOT RECOMMENDED IF YOU NEED ACCURACY. Use goToGoal instead.
+ *	NOT RECOMMENDED IF YOU NEED ACCURACY. Use goToGoal instead. But this is useful for
+ *	recovery behavior.
  **/
-void FirefighterRobot::move(float distance) {
+void FirefighterRobot::backUp(float distance) {
 	// convert distance to encoder ticks
 	// distance = ticks * wheel circumference * (1 / ticks per revolution), or
 	// ticks = distance * ticks per revolution / wheel circumference
 	long ticks = fabs(floor( (distance * encoder[ moveMotorIndex ]->getCountsPerRevolution()) / 
 		(wheelDiameter[ moveMotorIndex ] * M_PI) ));
 
-	// TODO: safety cap on while loops and make sure we don't bang into anything either
-	float basePWM = movePWM;
-	if(distance < 0) {
-		basePWM *= -1;
-	}
+	// we always move backwards
+	float basePWM = -movePWM;
 	
-	resetOdometers();
+	resetOdometers();	// also does odom reset
 	stallWatcher->reset();
+	odom.update();
+	long lastUpdateTime = millis();
+	long currentTime;
 
 	do {
 		// no PID
 		drive(basePWM, basePWM);
+
+		currentTime = millis();
+		if(currentTime - lastUpdateTime > 10) {
+			odom.update();
+			lastUpdateTime = currentTime;
+		}
 	} while((!stallWatcher->isStalled()) && (getOdometerValue(moveMotorIndex) < ticks) &&  
 			(getOdometerValue(moveMotorIndex) > -ticks));
 }
@@ -652,9 +659,8 @@ float FirefighterRobot::getIRWallForwardDistance(short direction) {
 	}
 
 	float d_sonar_to_center = 6.0;
-	float d_sonar_to_ir = 7.4; // D
 	float x_position_ir = 6.3;  // E
-	float beta = 3 * DEG_TO_RAD;
+	float d_ir = 2.0; // TODO: remeasure
 	float gamma = 47 * DEG_TO_RAD;
 
 	// another sensor call
@@ -665,15 +671,13 @@ float FirefighterRobot::getIRWallForwardDistance(short direction) {
 	}
 
 	// some derived values we'll need
-	float distance_ir_to_wall = d_sonar_to_wall + (d_sonar_to_ir * sin(beta)) + (x_position_ir * tan(theta)); //dIR
-	// theTanThing blows up for theta = 90, as one would expect physically
-	float theTanThing = tan(0.5*(90 - theta - (2.0 * gamma))) / tan(0.5*(90 - theta));
+	float theTanThing = tan(0.5*(PI - (2.0 * gamma) - theta)) / tan(0.5*(PI - theta));
+	float x_base = x_position_ir + ((d_ir + d_sonar_to_wall) * tan((PI/2.0) - gamma));
 
-	float x0 = (d_sonar_to_center + d_sonar_to_wall);
-	float x1 = x_position_ir / cos(theta);
-	float x2 = (distance_ir_to_wall * (1 - theTanThing)) / (1 + theTanThing);
+	float x0 = (d_sonar_to_center + d_sonar_to_wall) * sin(theta);
+	float x1 = x_base * (1 + theTanThing) / (1 - theTanThing);
 
-	float x = x0 + x1 + x2;
+	float x = x0 + x1;
 	return x;
 }
 
@@ -916,7 +920,7 @@ void FirefighterRobot::recover() {
 	stop();
 	delay(500);
 	resetStallWatcher();
-	move(-10);
+	backUp(-10);
 	resetStallWatcher();
 }
 

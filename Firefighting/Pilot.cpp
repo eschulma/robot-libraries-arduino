@@ -465,7 +465,7 @@ int Pilot::go() {
 						
 						Serial.print("Moving ");
 						Serial.println(wallDistance - desiredWallDistance);
-						robot->move(wallDistance - desiredWallDistance);
+						robot->backUp(wallDistance - desiredWallDistance);
 						delay(DEBUG_DELAY);
 						return 1;
 					}
@@ -597,7 +597,7 @@ float Pilot::nudgeToAlign(short wallDirection) {
 	
 	// go a tad further, because sonar range is way too wide
 	if(!robot->isStalled()) {
-		robot->move(robot->getTrackWidth());
+		robot->backUp(robot->getTrackWidth());
 	}
 	
 	robot->stop();
