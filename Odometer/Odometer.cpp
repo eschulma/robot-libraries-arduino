@@ -61,6 +61,7 @@ void Odometer::setup(WheelEncoder* inEncoder[2], boolean isEncoderForward[2], do
 
 /**
  * This function resets the encoder counts, only; it does not change the current position.
+ * Use resetOdometer from your robot class instead of calling this directly.s
  */
 void Odometer::reset() {
 	for(int i = 0; i < 2; i++) {

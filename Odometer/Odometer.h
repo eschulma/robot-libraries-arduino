@@ -20,7 +20,7 @@ public:
 	Odometer();
 	void setup(WheelEncoder *inEncoder[2], boolean isEncoderForward[2], double inWheelDiameter[2], double trackWidth);
 	void update();
-	void reset();
+	void reset();	// use resetOdometer from robot class instead
 
 	void setGoalPosition(double x, double y);
 	void setTargetHeading(double inHeading) { targetHeading = inHeading; }; // used for turn function
