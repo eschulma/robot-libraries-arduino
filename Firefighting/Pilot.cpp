@@ -8,7 +8,6 @@ Pilot::Pilot(Maze* inMaze, FirefighterRobot* inRobot, mazeHeading startHeading){
 	heading = startHeading;
 	pathIndex = 0;
 	lastPingTime = 0;
-	hallwayWidth = maze->getHallwayWidth();
 
 	followMethod = PILOT_FOLLOW_NONE;
 	nodeCheck = PILOT_CHECK_FORWARD;
@@ -90,17 +89,16 @@ int Pilot::setCourse() {
 		return -2;
 	}
 	
+	// we can't set hallway width in the constructor, as maze is not ready yet
+	hallwayWidth = maze->getHallwayWidth();
 	if(hallwayWidth == 0) {
 		Serial.println("Hallway width was zero!!! Corrupted memory, exiting.");
 		return -2;
 	}
 
-	// TODO: rooms 3 and 4 may have a hall of width 56 cm between them?
+	// TODO: rooms 3 and 4 may have a hall of width 56 cm between them
 	if((currentNode.id == 0) && (nextNode.id == 1)) {
 		hallwayWidth = 34;	// this applies when we are heading for room 3
-	}
-	else {
-		hallwayWidth = maze->getHallwayWidth();
 	}
 	
 	// hand-tune for entering room 2
@@ -122,9 +120,10 @@ int Pilot::setCourse() {
 		// unlikely...
 		if(robot->isStalled()) {	
 			robot->stop();	
+			// TODO: should take a look and see where we are stuck, etc.
 			robot->recover();
 			delay(500);
-			robot->alignLeft();
+			robot->align(ROBOT_LEFT);
 			delay(500);
 			
 			robot->odom.markPosition();
@@ -148,7 +147,7 @@ int Pilot::setCourse() {
 	
 	// hand-tuning for going from node 2 to node 3
 	if((currentNode.id == 2) && (nextNode.id == 3)) {
-		robot->alignLeft();
+		robot->align(ROBOT_LEFT);
 		robot->stop();
 	}
 	
@@ -206,7 +205,6 @@ int Pilot::setCourse() {
 				
 	// update current node to new one
 	currentNode.isVisited = true;
-	pathIndex++;
 	distanceToNext = nodeDistance;
 	
 	// for rooms, follow left wall in
@@ -236,6 +234,10 @@ int Pilot::setCourse() {
 	}
 
 	// (put any handtuning here)
+	if(pathIndex == 0) {
+		doAlignLeft = false;
+		doAlignRight = false;
+	}
 	if((currentNode.id == 1) && (nextNode.id == 2)) {
 		followMethod = PILOT_FOLLOW_LEFT;
 		doAlignLeft = false;
@@ -258,13 +260,27 @@ int Pilot::setCourse() {
 	}
 
 	// if we will be following a wall, make sure that it is in view first.
-	if(doAlignRight) {
-		Serial.println("Aligning right.");
-		int rightHeading = (newHeading + 1) % 4;
-		if(currentNode.neighbor[rightHeading] != MAZE_WALL) {
-			Serial.println("Moving forward to find right wall.");
+	if(doAlignRight || doAlignLeft) {
+		short wallSide = ROBOT_RIGHT;
+		if(!doAlignRight) {
+			wallSide = ROBOT_LEFT;
+		}
+
+		Serial.print("Aligning side ");
+		Serial.println(wallSide);
+
+		int heading;
+		if(wallSide == ROBOT_LEFT ) {
+			heading = (newHeading + 3) % 4; // left heading
+		}
+		else {
+			heading = (newHeading + 1) % 4; // right heading
+		}
+
+		if(currentNode.neighbor[heading] != MAZE_WALL) {
+			Serial.println("Moving forward to find wall.");
 						
-			float dist = nudgeToAlign(MOTOR_RIGHT);
+			float dist = nudgeToAlign(wallSide);
 			distanceToNext -= dist;
 			if(dist != 0) {
 				delay(500); // need this for wall alignment.
@@ -272,24 +288,7 @@ int Pilot::setCourse() {
 		}
 		
 		// And now. Try to align with wall.
-		robot->alignRight();
-		delay(500);	// delays after turns are important
-	}
-	else if(doAlignLeft) {
-		Serial.println("Aligning left.");
-		int leftHeading = (newHeading + 3) % 4;
-		if(currentNode.neighbor[leftHeading] != MAZE_WALL) {
-			Serial.println("Moving forward to find left wall.");
-						
-			float dist = nudgeToAlign(MOTOR_LEFT);
-			distanceToNext -= dist;
-			if(dist != 0) {
-				delay(500); // need this for wall alignment.
-			}
-		}
-		
-		// And now. Try to align with wall.
-		robot->alignLeft();
+		robot->align(wallSide);
 		delay(500);	// delays after turns are important
 	}
 
@@ -307,14 +306,14 @@ int Pilot::setCourse() {
 		delay(500);
 
 		if(followMethod == PILOT_FOLLOW_LEFT) {
+			Serial.println("Initializing wall sensor on left.");
 			robot->initDesiredWallSensorReadings(ROBOT_LEFT);
 			isDesiredWallSensorReadingSet = true;
-			Serial.println("Initializing wall sensor on left.");
 		}
 		else if(followMethod == PILOT_FOLLOW_RIGHT) {
+			Serial.println("Initializing wall sensor on right.");
 			robot->initDesiredWallSensorReadings(ROBOT_RIGHT);
 			isDesiredWallSensorReadingSet = true;
-			Serial.println("Initializing wall sensor on right.");
 		}
 
 		if(!isDesiredWallSensorReadingSet) {
@@ -331,7 +330,7 @@ int Pilot::setCourse() {
 	robot->resetCalculatedMovePWMs();
 	
 	Serial.print("For path index ");
-	Serial.println(pathIndex - 1);
+	Serial.println(pathIndex);
 	Serial.print("Follow method is ");
 	Serial.println(followMethod);
 	Serial.print("Check method is ");
@@ -341,6 +340,8 @@ int Pilot::setCourse() {
 	// Serial.print("Front stop distance is ");
 	// Serial.println(frontStopDistance);
 	
+	pathIndex++;
+
 	return 0;
 }
 
@@ -382,11 +383,29 @@ void Pilot::changeHeading(mazeHeading currentHeading, mazeHeading newHeading) {
 }
 
 int Pilot::go() {	
-	// TODO: if we are following a wall or moving and haven't reached full power (use fabs), keep going
+	// if we are following a wall or moving and haven't reached full power (use fabs), keep going
 	if(robot->isStalled()) {
-		robot->recover();
-		robot->turn(-30 * DEG_TO_RAD);
-		robot->stop();
+		boolean doRecovery = true;
+		if((followMethod == PILOT_FOLLOW_LEFT) || (followMethod == PILOT_FOLLOW_RIGHT)) {
+			if(fabs(robot->getFollowWallCalculatedPWM()) < robot->getMaxAllowedPWM()) {
+				doRecovery = false;
+			}
+			else {
+				if(fabs(robot->getMoveCalculatedPWM()) < robot->getMaxAllowedPWM()) {
+					doRecovery = false;
+				}
+			}
+		}
+		robot->resetStallWatcher();
+
+		// TODO: should take a look and see where we are stuck, etc.
+		if(doRecovery) {
+			Serial.println("Attempting recovery.");
+			robot->recover();
+			robot->turn(-30 * DEG_TO_RAD);
+			robot->stop();
+			robot->resetStallWatcher();
+		}
 	}
 
 	float moveStopDistance = 0;
@@ -397,7 +416,7 @@ int Pilot::go() {
 //	}
 
 	robot->odom.update();
-	float distanceTravelled = fabs(robot->odom.getDistanceFromMarkedPoint());
+	float distanceTravelled = robot->odom.getDistanceFromMarkedPoint();
 	
 	// straight distance check first
 	if(nodeCheck == PILOT_CHECK_DISTANCE) {
@@ -414,6 +433,7 @@ int Pilot::go() {
 		sensorPause = 100; // time for the ultrasonic reading itself, +50
 	}
 			
+	// TODO: put in flag to start sensor checks
 	// if we are approaching the next node
 	if(distanceTravelled + maze->getNodeRadius() > distanceToNext) {
 			
@@ -428,6 +448,8 @@ int Pilot::go() {
 										
 				if(wallDistance < desiredWallDistance + (2.0 * moveStopDistance)) {
 					delay(75);
+					robot->odom.update();
+
 					wallDistance = robot->getFrontWallDistance();
 					lastPingTime += 75;
 					if(wallDistance  < desiredWallDistance + (2.0 * moveStopDistance)) {
@@ -442,12 +464,12 @@ int Pilot::go() {
 						Serial.print("Desired walldistance ");
 						Serial.println(desiredWallDistance);
 						
-						if(desiredWallDistance < 0) {
-							Serial.print("Hallway width ");
-							Serial.println(hallwayWidth);
-							Serial.print("Track width ");
-							Serial.println(robot->getTrackWidth());
-						}
+//						if(desiredWallDistance < 0) {
+//							Serial.print("Hallway width ");
+//							Serial.println(hallwayWidth);
+//							Serial.print("Track width ");
+//							Serial.println(robot->getTrackWidth());
+//						}
 						
 						// don't move for small things
 						if(fabs(wallDistance - desiredWallDistance) < 5) {
@@ -472,58 +494,54 @@ int Pilot::go() {
 				}
 			} // if checking forward
 			
-			if(nodeCheck == PILOT_CHECK_LEFT) {
-				// if left wall lost, delay slightly and check again to confirm, stop and return 1
-				if(robot->isSideWallLost(ROBOT_LEFT)) {
-					delay(50);
-					lastPingTime += 50;
-					if(robot->isSideWallLost(ROBOT_LEFT)) {
-						Serial.println("PILOT_CHECK_LEFT triggered.");
-						nudgeForwardAfterWallLoss(ROBOT_LEFT);
-						return 1;
-					}
+			float maxMisalignment = 5 * DEG_TO_RAD; // don't make this too small
+			if((nodeCheck == PILOT_CHECK_LEFT) || (nodeCheck == PILOT_CHECK_RIGHT)) {
+				short wallSide = ROBOT_LEFT;
+				if(nodeCheck == PILOT_CHECK_RIGHT) {
+					wallSide = ROBOT_RIGHT;
 				}
-			}
-			if(nodeCheck == PILOT_CHECK_RIGHT) {
-				// if right wall lost, delay slightly and check again to confirm, stop and return 1
-				if(robot->isSideWallLost(ROBOT_RIGHT)) {
+				// if wall lost, delay slightly and check again to confirm, stop and return 1
+				if(robot->isSideWallLost(wallSide)) {
 					delay(50);
+					robot->odom.update();
+
 					lastPingTime += 50;
-					if(robot->isSideWallLost(ROBOT_RIGHT)) {
-						Serial.println("PILOT_CHECK_RIGHT triggered.");
-						nudgeForwardAfterWallLoss(ROBOT_RIGHT);
-						return 1;
+					if(robot->isSideWallLost(wallSide)) {
+						Serial.println("PILOT_CHECK_LEFT/RIGHT triggered.");
+
+						// see if we are way off in angle, and if so, try to align
+						robot->stop();
+						delay(500);
+						robot->resetStallWatcher();
+
+						float theta = robot->getMisalignmentAngle(wallSide);
+						if((theta != ROBOT_NO_VALID_DATA) && (fabs(theta) > maxMisalignment)) {
+							// this should work for both right and left sides
+							Serial.print("Turning to find wall (degrees): ");
+							Serial.println(theta * RAD_TO_DEG);
+							robot->turn(theta);
+							robot->stop();
+						}
+
+						// if wall still lost, give up
+						if(robot->isSideWallLost(wallSide)) {
+							Serial.print("Lost wall: ");
+							Serial.println(wallSide);
+							nudgeForwardAfterWallLoss(wallSide);
+							return 1;
+						}
+						else {
+							Serial.println("Re-found wall.");
+
+							// try to avoid endless loop
+							lastPingTime += 100;
+						}
 					}
 				}
 			}
 			if(nodeCheck == PILOT_CHECK_RIGHT_APPEARANCE) {
 				// TODO: if right wall appears, delay slightly and check again to confirm, stop and return 1
 			}
-			
-			/* if we are following a wall, make sure it is still there
-			if(followMethod == PILOT_FOLLOW_LEFT) {
-				if(robot->isSideWallLost(ROBOT_LEFT)) {
-					delay(50);
-					lastPingTime += 50;
-					if(robot->isSideWallLost(ROBOT_LEFT)) {
-						Serial.print("Lost our left wall to follow.");
-						Serial.print(" Follow method value was ");
-						Serial.println(followMethod);
-						followMethod = PILOT_FOLLOW_NONE;
-					}
-				}
-			}
-			if(followMethod == PILOT_FOLLOW_RIGHT) {
-				if(robot->isSideWallLost(ROBOT_RIGHT)) {
-					delay(50);
-					lastPingTime += 50;
-					if(robot->isSideWallLost(ROBOT_RIGHT)) {
-						Serial.println("Lost our right wall to follow.");
-						followMethod = PILOT_FOLLOW_NONE;
-					}
-				}
-			} */
-			// TODO: add for rear wall follow, though this may be less necessary;reverse speed there too
 			
 		} // if enough time elapsed
 	} // endif approaching next node
@@ -535,12 +553,9 @@ int Pilot::go() {
 	else if(followMethod == PILOT_FOLLOW_RIGHT) {
 		robot->followWall(ROBOT_RIGHT);
 	}
-	else if(followMethod == PILOT_FOLLOW_LEFT_REAR) {
-		robot->followWallRear(ROBOT_LEFT);
-	}
 	else if(followMethod == PILOT_FOLLOW_NONE) {
 		// we lost our wall. Maybe go slower?
-		robot->drive(robot->getMoveSpeed(), robot->getMoveSpeed());
+		robot->driveTowardGoal();
 	}
 	else {
 		// error
@@ -560,15 +575,12 @@ int Pilot::go() {
 void Pilot::nudgeForwardAfterWallLoss(short wallDirection) {
 	robot->stop();
 	delay(500);
+	robot->resetCalculatedMovePWMs();
 
-	float nudgeDistance = robot->getIRWallForwardDistance(wallDirection) + (hallwayWidth / 2.0);
+	// TODO: put hallway back in after testing done!!
+	float nudgeDistance = robot->getIRWallForwardDistance(wallDirection); // + (hallwayWidth / 2.0);
 
-	if(wallDirection == ROBOT_LEFT) {
-		robot->alignLeft();
-	}
-	else {
-		robot->alignRight();
-	}
+	// robot->align(wallDirection); now done in go()
 	robot->move(nudgeDistance, 0);
 	delay(DEBUG_DELAY);
 	
@@ -584,15 +596,24 @@ float Pilot::nudgeToAlign(short wallDirection) {
 	
 	robot->resetOdometers();
 	robot->resetStallWatcher();
+	robot->resetCalculatedMovePWMs();
+
+	robot->odom.markPosition();
+	robot->odom.setGoalPosition(robot->odom.getX() + 50, robot->odom.getY());
+
 	while(!robot->isStalled()) {
-		robot->drive(robot->getMoveSpeed(), robot->getMoveSpeed());		
-		if(robot->getSideWallDistance(ROBOT_LEFT) < hallwayWidth) {
+		// drive slowly forward
+		robot->driveTowardGoal(0.5);
+		float sideWallDistance = robot->getSideWallDistance(ROBOT_LEFT);
+		if((sideWallDistance != ROBOT_NO_VALID_DATA) && (sideWallDistance < hallwayWidth)) {
 			// delay and double-check
 			delay(75);
 			if(robot->getSideWallDistance(ROBOT_LEFT) < hallwayWidth) {
 				break;
 			}
 		}
+		// TODO: when sonar code improved, use here as well
+		delay(75);
 	}
 	
 	// go a tad further, because sonar range is way too wide
@@ -604,7 +625,7 @@ float Pilot::nudgeToAlign(short wallDirection) {
 	
 	// TODO: if watcher stalled, do some recovery
 	
-	distance += robot->odom.getDistanceFromMarkedPoint();
+	distance = robot->odom.getDistanceFromMarkedPoint();
 	
 	return distance;
 }

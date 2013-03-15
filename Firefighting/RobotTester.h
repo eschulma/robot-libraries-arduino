@@ -22,18 +22,45 @@ void testWallLoss() {
   }
 }
 
+void testWallFollowingPilot() {
+	// can use pilot.setStart to start at arbitrary node
+	pilot.setCourse();
+
+	// pilot.distanceToNext = 0; // smooth surfaces only!
+	// Node radius is 30
+	pilot.distanceToNext = 60;
+
+	while(1) {
+	    int returnCode = pilot.go();
+	    if(returnCode != 0) {
+	    	Serial.print("Pilot return code ");
+	    	Serial.println(returnCode);
+	    	break;
+	    }
+	}
+	robot->stop();
+}
+
 void testWallFollowing() {
-  int wallSide = ROBOT_LEFT;
+  pilot.setCourse();
+
+  int wallSide = ROBOT_RIGHT;
   float stopFrontDistance = 23 - ((robot->getTrackWidth())/2.0);
 
   robot->initDesiredWallSensorReadings(wallSide);
   robot->resetOdometers();
   robot->resetStallWatcher();
   
-  while(!robot->isSideWallLost(wallSide)) {
+  while(1) {
+	if(robot->isSideWallLost(wallSide)) {
+		delay(50);
+		if(robot->isSideWallLost(wallSide)) {
+			break;
+		}
+	}
 	// don't give up with stalls until we've reached maximum torque
 	if(robot->isStalled()) {
-		if(robot->getFollowWallCalculatedSpeed() > 200) {
+		if(robot->getFollowWallCalculatedPWM() > robot->getMaxAllowedPWM()) {
 			Serial.println("We stalled!");
 			break;
 		}
@@ -49,12 +76,14 @@ void testWallFollowing() {
   float lossDistanceReading = robot->getSideWallDistanceReading(wallSide);
   robot->stop();
 
-  Serial.print("Lost wall at side wall distance ");
+  Serial.print("Lost wall at IR side wall distance ");
   Serial.println(lossDistanceReading);
   Serial.print("Front wall distance ");
   Serial.println(robot->getFrontWallDistance());
+
+  float val = robot->getIRWallForwardDistance(wallSide);
   Serial.print("IR point along wall: ");
-  Serial.println(robot->getIRWallForwardDistance(wallSide));
+  Serial.println(val);
 }
 
 void testFireSensors() {

@@ -14,11 +14,11 @@ WheelEncoder robotEncoder[2] = { WheelEncoder(ENCODER_LEFT_A_PIN, ENCODER_LEFT_B
 									),
 								WheelEncoder(ENCODER_RIGHT_A_PIN, ENCODER_RIGHT_B_PIN,
 									FAULHABER_COUNTS_PER_REVOLUTION) };
-NewPing robotSonar[5] = { NewPing(SONAR_FORWARD_TRIGGER_PIN, SONAR_FORWARD_ECHO_PIN, 40),
-		NewPing(SONAR_LEFT_F_TRIGGER_PIN, SONAR_LEFT_F_ECHO_PIN, 40),
-		NewPing(SONAR_LEFT_R_TRIGGER_PIN, SONAR_LEFT_R_ECHO_PIN, 40),
-		NewPing(SONAR_RIGHT_F_TRIGGER_PIN, SONAR_RIGHT_F_ECHO_PIN, 40),
-		NewPing(SONAR_RIGHT_R_TRIGGER_PIN, SONAR_RIGHT_R_ECHO_PIN, 40) };
+NewPing robotSonar[5] = { NewPing(SONAR_FORWARD_TRIGGER_PIN, SONAR_FORWARD_ECHO_PIN, 50),
+		NewPing(SONAR_LEFT_F_TRIGGER_PIN, SONAR_LEFT_F_ECHO_PIN, 50),
+		NewPing(SONAR_LEFT_R_TRIGGER_PIN, SONAR_LEFT_R_ECHO_PIN, 50),
+		NewPing(SONAR_RIGHT_F_TRIGGER_PIN, SONAR_RIGHT_F_ECHO_PIN, 50),
+		NewPing(SONAR_RIGHT_R_TRIGGER_PIN, SONAR_RIGHT_R_ECHO_PIN, 50) };
 																
 StallWatcher robotStallWatcher(&robotEncoder[0], &robotEncoder[1]);
 
@@ -96,7 +96,7 @@ void FireCheetah::setup() {
 	maxAllowedPWM = 253; // must be LESS than 254
 
 	// 9V values
-	followWallPWM = 90;
+	followWallPWM = 65; // 90;
 	movePWM = 65; // 90;
 	turnPWM = 30;
 

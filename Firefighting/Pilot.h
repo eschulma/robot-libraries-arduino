@@ -8,7 +8,6 @@
 enum pilotFollowMethod {
 	PILOT_FOLLOW_LEFT,
 	PILOT_FOLLOW_RIGHT,
-	PILOT_FOLLOW_LEFT_REAR,
 	PILOT_FOLLOW_NONE
 };
 
@@ -45,6 +44,11 @@ class Pilot {
 		void setStart(short startPathIndex, mazeHeading startHeading);
 				
 		Pilot(Maze* inMaze, FirefighterRobot* inRobot, mazeHeading startHeading);
+
+#ifdef FIREFIGHTER_TEST
+		friend class RobotTester;	// for testing
+#endif
+
 };
 
 #endif

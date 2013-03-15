@@ -75,7 +75,6 @@ class FirefighterRobot {
 		float getSideWallRearDistanceReading(short direction) { return analogRead(wallRearSensorPin[direction]); };
 		float getSonarWallDistance(sonarLocation index);		
 		
-		boolean align(short direction);
 		float getMisalignment(short direction);
 		
 		void followWall(short direction, float velocityFactor, int idealWallSensorReading);
@@ -91,10 +90,11 @@ class FirefighterRobot {
 
 		void stop();
 		void drive(int velocityLeft, int velocityRight);
-		void driveTowardGoal(float velocityFactor = 1.0, boolean goBackwards = false);
+		void driveTowardGoal(float velocityFactor = 1.0);
 		boolean move(double x, double y, boolean inRobotFrame = true);
 		boolean goToGoal(double goalX, double goalY);
 		boolean turn(double deltaHeading);
+		boolean align(short direction);
 		void backUp(float distance);	// go this distance in a straight line, forward or back only DEPRECATED
 
 		void setFanServo(short degrees);	// 0 is pointing forward
@@ -111,8 +111,6 @@ class FirefighterRobot {
 		
 		void initDesiredWallSensorReadings(short direction);
 		void followWall(short direction, float velocityFactor = 1.0) { 	followWall(direction, velocityFactor, desiredWallSensorReading[direction]); };
-		void followWallRear(short direction) { 	followWallRear(direction, desiredWallSensorReading[direction]); };	
-		void followWallRear(short direction, int idealWallSensorReading);
 		float getFollowWallSpeed() { return followWallPWM; };
 		float getMoveSpeed() { return movePWM; };
 		float getIRWallForwardDistance(short direction);
@@ -121,22 +119,22 @@ class FirefighterRobot {
 		float getFrontWallDistance() { float value = getSonarWallDistance(SONAR_FRONT); return value; }
 		float getSideWallDistance(short direction);
 		float getMisalignmentAngle(short direction);
-		
-		void alignLeft() { align(ROBOT_LEFT); };
-		void alignRight() { align(ROBOT_RIGHT); };
 
 		long getOdometerValue(short motorIndex) { return motor[motorIndex]->getOdometerValue(); };
 		// void resetOdometer(short direction) { motor[direction].resetOdometer(); };
-		void resetOdometers() { odom.reset(); };
+		void resetOdometers();
 		void resetCalculatedMovePWMs();
 
 		float getTrackWidth() { return trackWidth; };
-		float getFollowWallCalculatedSpeed() { return followWallCalculatedPWM; };
+		float getFollowWallCalculatedPWM() const { return followWallCalculatedPWM; }
+		short getMaxAllowedPWM() const { return maxAllowedPWM; }
+		float getMoveCalculatedPWM() const { return moveCalculatedPWM; }
 
 		FirefighterRobot();
 
 #ifdef FIREFIGHTER_TEST
 		friend class RobotTester;	// for testing
 #endif
+
 };
 #endif
