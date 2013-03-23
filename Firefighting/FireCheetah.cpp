@@ -108,10 +108,11 @@ void FireCheetah::setup() {
 	targetFollowVelocity = 20.0;
 	targetAngularVelocity = 0.6;
 		
-	for(int i = 0; i < 2; i++) {
-		desiredWallSensorReading[i] = 120;
-	}
-	sideWallLossFactor = 0.8;	// higher number means we lose it at a nearer distance
+	// tested on white walls, 23 cm distance
+	desiredWallSensorReading[ROBOT_LEFT] = 150;
+	desiredWallSensorReading[ROBOT_RIGHT] = 180;
+
+	sideWallLossFactor = 0.7;	// higher number means we lose it at a nearer distance
 	// set this high for single room, as we know the fire is there!
 	fireThresholdReading = 75; // but this is a small room, and reflections off walls a problem.
 	fireThresholdReadingNear = 50;

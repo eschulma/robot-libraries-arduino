@@ -2,6 +2,10 @@
 #define Maze_h
 #include <Arduino.h>
 
+#define MAZE_NUM_NODES 12
+#define MAZE_PATH_LENGTH 6
+#define MAZE_NUM_ROOMS 2
+
 typedef struct {
 	short id;
 	short neighbor[4];
@@ -30,22 +34,22 @@ class Maze {
 	private:
 		virtual void setup() = 0;
 	protected:
-		mapNode* nodeList;
-		short* pathList;
-		roomNode* roomList;
+		mapNode nodeList[MAZE_NUM_NODES];
+		short pathList[MAZE_PATH_LENGTH];
+		roomNode roomList[MAZE_NUM_ROOMS];
 	
 		float nodeRadius;
 		float hallwayWidth;
 		void emptyMaze();	// be careful, arrays must be allocated and assigned abefore calling this
 	public:
-		virtual short getNumNodes();
-		virtual short getNumRooms();
-		virtual short getPathLength();
+		short getNumNodes() { return MAZE_NUM_NODES; };
+		short getNumRooms() { return MAZE_NUM_ROOMS; };
+		short getPathLength() { return MAZE_PATH_LENGTH; };
 
+		mapNode getPathNode(short pathIndex);
 		boolean isRoom(short nodeIndex) { return nodeList[nodeIndex].isRoom; };
 		float getNodeRadius() { return nodeRadius; };
 		float getHallwayWidth();
-		mapNode getPathNode(int index) { return nodeList[pathList[index]]; };
 		roomNode getRoomNode(short id);
 		
 		Maze() {};

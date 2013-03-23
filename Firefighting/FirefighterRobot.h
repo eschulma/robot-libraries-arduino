@@ -30,6 +30,7 @@ class FirefighterRobot {
 	protected:
 		ControllerMotor *motor[2];
 		WheelEncoder *encoder[2];
+		Odometer odom;
 		NewPing *sonar[5];
 		StallWatcher* stallWatcher;
 		Servo fanServo;
@@ -73,7 +74,7 @@ class FirefighterRobot {
 		
 		float getSideWallDistanceReading(short direction) { return analogRead(wallSensorPin[direction]); };
 		float getSideWallRearDistanceReading(short direction) { return analogRead(wallRearSensorPin[direction]); };
-		float getSonarWallDistance(sonarLocation index);		
+		float getSonarDistance(sonarLocation index);		
 		
 		float getMisalignment(short direction);
 		
@@ -86,22 +87,25 @@ class FirefighterRobot {
 		// children must override these
 		virtual void setup() = 0;		
 	public:
-		Odometer odom;
-
 		void stop();
 		void drive(int velocityLeft, int velocityRight);
 		void driveTowardGoal(float velocityFactor = 1.0);
 		boolean move(double x, double y, boolean inRobotFrame = true);
+		void setGoal(double x, double y, boolean inRobotFrame = true);
 		boolean goToGoal(double goalX, double goalY);
 		boolean turn(double deltaHeading);
 		boolean align(short direction);
 		void backUp(float distance);	// go this distance in a straight line, forward or back only DEPRECATED
 
+		void updateOdometry() { odom.update(); };
+		void markPosition() { odom.markPosition(); };
+		float getDistanceFromMarkedPoint() { return odom.getDistanceFromMarkedPoint(); }
+
 		void setFanServo(short degrees);	// 0 is pointing forward
 		void turnFanOn(boolean on);
 		int panServoForFire();
 		void fightFire();		
-		void recover();
+		float recover();
 
 		boolean isFire(boolean bNear);		
 		float getBatteryChargeLevel() { return batteryChargeLevel; };
@@ -109,15 +113,17 @@ class FirefighterRobot {
 		boolean isStalled() { return stallWatcher->isStalled(); };
 		void resetStallWatcher() { stallWatcher->reset(); };
 		
-		void initDesiredWallSensorReadings(short direction);
+		void initDesiredIRSensorReadings(short direction);
 		void followWall(short direction, float velocityFactor = 1.0) { 	followWall(direction, velocityFactor, desiredWallSensorReading[direction]); };
 		float getFollowWallSpeed() { return followWallPWM; };
 		float getMoveSpeed() { return movePWM; };
-		float getIRWallForwardDistance(short direction);
+		float getCalculatedWallEnd(short direction);
+		int getSideClosestToForwardObstacle();
 		
 		boolean isSideWallLost(short direction);
-		float getFrontWallDistance() { float value = getSonarWallDistance(SONAR_FRONT); return value; }
-		float getSideWallDistance(short direction);
+		float getFrontWallDistance();
+		float getSideWallDistance(short direction); // NOTE: this is slow!
+		boolean isAlignmentPossible(short direction, float maxDistance);
 		float getMisalignmentAngle(short direction);
 
 		long getOdometerValue(short motorIndex) { return motor[motorIndex]->getOdometerValue(); };

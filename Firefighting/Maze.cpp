@@ -32,8 +32,25 @@ roomNode Maze::getRoomNode(short id) {
 	}
 	
 	// we didn't find it, but don't want a crash
-	Serial.print("Search made for non-existent room node!! id = ");
+	Serial.print("!!!!!! Search made for non-existent room node!! id = ");
 	Serial.println(id);
 	roomNode junk;
 	return junk;
+}
+
+mapNode Maze::getPathNode(short pathIndex) {
+	if(pathIndex > getPathLength()) {
+		Serial.print("!!!!!!!!!! Error!!! Path index outside bounds: ");
+		Serial.println(pathIndex);
+		return nodeList[0];
+	}
+
+	short nodeIndex = pathList[pathIndex];
+	if(nodeIndex > getNumNodes()) {
+		Serial.print("!!!!!!!!!! Error!!! Node index for path list outside bounds, index was: ");
+		Serial.println(pathIndex);
+		return nodeList[0];
+	}
+
+	return nodeList[nodeIndex];
 }

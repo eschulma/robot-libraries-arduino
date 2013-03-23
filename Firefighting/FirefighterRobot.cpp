@@ -61,10 +61,26 @@ boolean FirefighterRobot::move(double x, double y, boolean inRobotFrame) {
 	return goToGoal(x, y);
 }
 
+/**
+ * Set odometry goal, by default in the robot frame.
+ */
+void FirefighterRobot::setGoal(double x, double y, boolean inRobotFrame) {
+	if(inRobotFrame) {
+		// must transform from robot frame to world frame
+		odom.transformRobotPointToOdomPoint(&x, &y);
+	}
+
+	// now x and y are in the world frame
+	odom.setGoalPosition(x, y);
+	return;
+}
+
+
 
 /**
  * Move the robot to the specified goal point in world coordinates.
- * We don't care about the final heading.
+ * We don't care about the final heading. If you want to do this in
+ * robot coordinates, use move instead.
  *
  * This is a little risky to call repeatedly, unless the odometry is very
  * accurate or has been corrected by sensor input. If it isn't, the world
@@ -390,7 +406,7 @@ void FirefighterRobot::turnFanOn(boolean on) {
  *	nicely when this is called. Use the sensor on the specified side to
  *	set the value.
  */
-void FirefighterRobot::initDesiredWallSensorReadings(short direction) {
+void FirefighterRobot::initDesiredIRSensorReadings(short direction) {
 	long wallDistance = 0;
 	for(int j = 0; j < 5; j++) {
 		wallDistance += getSideWallDistanceReading(direction);
@@ -410,6 +426,34 @@ void FirefighterRobot::initDesiredWallSensorReadings(short direction) {
 
 	// assume the other sensor needs the same value -- testing indicates this is reasonable
 	desiredWallSensorReading[otherSide] = desiredWallSensorReading[direction];
+}
+
+/**
+ * Useful if the front sonar has detected an obstacle. Generally we will want to
+ * turn towards the IR sensor that is furthest away. If they are tied, this function
+ * returns NO_VALID_DATA.
+ */
+int FirefighterRobot::getSideClosestToForwardObstacle() {
+	long wallReading[2];
+	for(int i = 0; i < 2; i++) {
+		wallReading[i] = getSideWallDistanceReading(i);
+		// IR sensors do seem to return 0 when nothing seen...complicates things
+		if(wallReading[i] == 0) {
+			wallReading[i] = 10000;
+		}
+	}
+
+	int closeSide = ROBOT_LEFT;
+	if(wallReading[ROBOT_RIGHT] > wallReading[ROBOT_LEFT]) {
+		closeSide = ROBOT_RIGHT;
+	}
+	else if(wallReading[ROBOT_RIGHT] == wallReading[ROBOT_LEFT]) {
+		closeSide = ROBOT_NO_VALID_DATA;
+	}
+
+	Serial.print("Side closest to wall: ");
+	Serial.println(closeSide);
+	return closeSide;
 }
 
 /**
@@ -475,9 +519,10 @@ boolean FirefighterRobot::isSideWallLost(short direction) {
 }
 
 /**
- * This will return 0 for distances greater than max distance -- be careful.
+ * CM from nearest obstacle for this sonar.
+ * This will return ROBOT_NO_VALID_DATA for distances greater than max distance -- be careful.
  */
-float FirefighterRobot::getSonarWallDistance(sonarLocation loc) {
+float FirefighterRobot::getSonarDistance(sonarLocation loc) {
 	// Serial.print("Getting distance for sonar wall ");
 	// Serial.println(loc);
 
@@ -485,6 +530,10 @@ float FirefighterRobot::getSonarWallDistance(sonarLocation loc) {
 	//Serial.print("Wall distance ");
 	//Serial.println(wallDistance);
 	
+	if(wallDistance == 0) {
+		wallDistance = ROBOT_NO_VALID_DATA;
+	}
+
 	return wallDistance;
 }
 
@@ -618,8 +667,48 @@ float FirefighterRobot::getMisalignmentAngle(short direction) {
 }
 
 /**
+ * To make simple comparisons easier for callers, we return 1000 when no
+ * wall is seen.
+ */
+float FirefighterRobot::getFrontWallDistance() {
+	float value = getSonarDistance(SONAR_FRONT);
+
+	// Ping library returns 0 when outside of max distance
+	if((value == 0) || (value == ROBOT_NO_VALID_DATA)) {
+		value = 1000;
+	}
+	return value;
+}
+
+/**
+ * Are the sonar close enough to a wall to make for reliable alignment?
+ */
+boolean FirefighterRobot::isAlignmentPossible(short direction, float maxDistance) {
+	boolean bResult = true;
+
+	sonarLocation mySonar[2] = {SONAR_LEFT_R, SONAR_LEFT_F};
+	if(direction == ROBOT_RIGHT) {
+		mySonar[0] = SONAR_RIGHT_R;
+		mySonar[1] = SONAR_RIGHT_F;
+	}
+
+	for(int i = 0; i < 2; i++) {
+		delay(75); // needed by callers to guarantee clean environment
+		float value = getSonarDistance(mySonar[i]);
+		if((value == 0) || (value == ROBOT_NO_VALID_DATA) || (value > maxDistance)) {
+			bResult = false;
+			break;
+		}
+	}
+
+	return bResult;
+}
+
+
+/**
  * We try to get readings from both sensors, but if only one sensor can get a reading,
- * we'll use that one.
+ * we'll use that one. Returns ROBOT_NO_VALID_DATA if we don't have a wall, so caller
+ * needs to check for that.
  */
 float FirefighterRobot::getSideWallDistance(short direction) {
 	float distance = 0;
@@ -669,7 +758,7 @@ float FirefighterRobot::getSideWallDistance(short direction) {
  * from the wall, the angle to the wall, and the relative position of the
  * sensors on the robot.
  */
-float FirefighterRobot::getIRWallForwardDistance(short direction) {
+float FirefighterRobot::getCalculatedWallEnd(short direction) {
 	// see what the sensors say first
 //	float theta = getMisalignmentAngle(direction);
 //	if(theta == ROBOT_NO_VALID_DATA) {
@@ -892,8 +981,7 @@ void FirefighterRobot::fightFire() {
 		resetOdometers();
 
 		odom.markPosition();
-		odom.update();
-		odom.setGoalPosition(odom.getX() + 25, odom.getY());
+		setGoal(25, 0);
 
 		// TODO: remove the delay when sonar no longer requires it
 		while((!isStalled()) && (getFrontWallDistance() > 25) && (odom.getDistanceFromMarkedPoint() < 25)) {
@@ -964,10 +1052,33 @@ void FirefighterRobot::resetOdometers() {
 	stallWatcher->reset();
 }
 
-void FirefighterRobot::recover() {
+float FirefighterRobot::recover() {
 	stop();
-	delay(500);
+	Serial.println("Attempting recovery.");
+
+	float angleTurned = 0;
 	resetStallWatcher();
-	backUp(-10);
+
+	short closeSide = getSideClosestToForwardObstacle();
+	if(closeSide == ROBOT_NO_VALID_DATA) {
+		// try again
+		closeSide = getSideClosestToForwardObstacle();
+		if(closeSide == ROBOT_NO_VALID_DATA) {
+			Serial.println("Angled forward sensors useless, guessing.");
+			closeSide = ROBOT_LEFT;
+		}
+	}
+
+	if(closeSide == ROBOT_RIGHT) {
+		turn(15 * DEG_TO_RAD);
+		angleTurned += 15 * DEG_TO_RAD;
+	}
+	else {
+		turn(-15 * DEG_TO_RAD);
+		angleTurned -= 15 * DEG_TO_RAD;
+	}
+	stop();
 	resetStallWatcher();
+
+	return angleTurned;
 }

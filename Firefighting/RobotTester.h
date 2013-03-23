@@ -41,13 +41,47 @@ void testWallFollowingPilot() {
 	robot->stop();
 }
 
+void testNudgeToAlign() {
+	// can use pilot.setStart to start at arbitrary node
+	pilot.setCourse();
+
+	// pilot.distanceToNext = 0; // smooth surfaces only!
+	// Node radius is 30
+	pilot.distanceToNext = 60;
+	Serial.print("Hallway width: ");
+	Serial.println(pilot.hallwayWidth);
+
+	float distance = pilot.nudgeToAlign(ROBOT_LEFT);
+	Serial.println(distance);
+
+	robot->stop();
+	delay(500);
+	robot->align(ROBOT_LEFT);
+}
+
+void testSegment() {
+	// can use pilot.setStart to start at arbitrary node
+	pilot.setStart(4, MAZE_EAST);
+	pilot.setCourse();
+
+	Serial.print("Hallway width: ");
+	Serial.println(pilot.hallwayWidth);
+
+	while(pilot.go() == 0) {
+		;
+	}
+
+	robot->stop();
+}
+
+
 void testWallFollowing() {
   pilot.setCourse();
 
   int wallSide = ROBOT_RIGHT;
   float stopFrontDistance = 23 - ((robot->getTrackWidth())/2.0);
 
-  robot->initDesiredWallSensorReadings(wallSide);
+  robot->initDesiredIRSensorReadings(wallSide);
   robot->resetOdometers();
   robot->resetStallWatcher();
   
@@ -81,7 +115,7 @@ void testWallFollowing() {
   Serial.print("Front wall distance ");
   Serial.println(robot->getFrontWallDistance());
 
-  float val = robot->getIRWallForwardDistance(wallSide);
+  float val = robot->getCalculatedWallEnd(wallSide);
   Serial.print("IR point along wall: ");
   Serial.println(val);
 }
