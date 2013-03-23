@@ -82,6 +82,9 @@ void Odometer::setCurrentPosition(double x, double y, double inHeading) {
 	targetHeading = calculateGoalHeading();
 }
 
+/**
+ * This always operates in the global odometry frame, not the robot frame.
+ */
 void Odometer::setGoalPosition(double x, double y) {
 	Serial.print("New goal: ");
 	Serial.print(x);
@@ -99,14 +102,18 @@ void Odometer::setGoalPosition(double x, double y) {
 void Odometer::markPosition(double x, double y) {
 	markX = x;
 	markY = y;
+
+	Serial.print("Marked position: ");
+	Serial.print(x);
+	Serial.print(", ");
+	Serial.println(y);
 }
 
 /**
  * Convenient way to "save" the current location in the world frame.
  */
 void Odometer::markPosition() {
-	markX = X;
-	markY = Y;
+	markPosition(X, Y);
 }
 
 
@@ -327,18 +334,34 @@ void Odometer::transformRobotPointToOdomPoint(double *x, double *y) {
  * Rotate, then translate...deltaX is "x in new frame - x in old frame" etc.
  */
 void Odometer::transformPoint(double *x, double *y, double deltaX, double deltaY, double deltaHeading) {
+//	Serial.print("transformPoint input: ");
+//	Serial.print(*x);
+//	Serial.print(", ");
+//	Serial.print(*y);
+//	Serial.print(": ");
+//	Serial.print(deltaX);
+//	Serial.print(", ");
+//	Serial.print(deltaY);
+//	Serial.print(": ");
+//	Serial.println(deltaHeading);
+
 	// rotate
 	double xnew = *x;
 	double ynew = *y;
 
 	// rotate
-	xnew = (xnew * cos(deltaHeading)) - (ynew * sin(deltaHeading));
-	ynew = (xnew * sin(deltaHeading)) + (ynew * cos(deltaHeading));
+	double xtemp = (xnew * cos(deltaHeading)) - (ynew * sin(deltaHeading));
+	double ytemp = (xnew * sin(deltaHeading)) + (ynew * cos(deltaHeading));
 
 	// translate
-	xnew += deltaX;
-	ynew += deltaY;
+	xnew = xtemp + deltaX;
+	ynew = ytemp + deltaY;
 
 	*x = xnew;
 	*y = ynew;
+
+//	Serial.print("transformPoint output: ");
+//	Serial.print(*x);
+//	Serial.print(", ");
+//	Serial.println(*y);
 }
