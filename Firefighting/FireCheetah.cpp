@@ -54,7 +54,7 @@ void FireCheetah::setup() {
 	setFanServo(0);
 	
 	pinMode(START_BUTTON_PIN, INPUT);
-	digitalWrite(START_BUTTON_PIN, LOW);
+	digitalWrite(START_BUTTON_PIN, HIGH);
 
 	wheelDiameter[ROBOT_LEFT] = 6.8; // 7.5; // cm, measured
 	wheelDiameter[ROBOT_RIGHT] = 6.7; // 7.4; // wheelDiameter[ROBOT_LEFT] ; //* 1.02;	// cm
@@ -114,7 +114,7 @@ void FireCheetah::setup() {
 
 	sideWallLossFactor = 0.7;	// higher number means we lose it at a nearer distance
 	// set this high for single room, as we know the fire is there!
-	fireThresholdReading = 75; // but this is a small room, and reflections off walls a problem.
+	fireThresholdReading = 800; // but this is a small room, and reflections off walls a problem.
 	fireThresholdReadingNear = 50;
 	
 	frontWallFoundDistance = 35;	// this relates to hallway width and stop distance
