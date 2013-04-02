@@ -18,7 +18,8 @@ void AbingtonMaze::setup() {
 	nodeList[1].distToNeighbor[MAZE_NORTH] = nodeList[0].distToNeighbor[MAZE_SOUTH];
 	nodeList[1].neighbor[MAZE_WEST] = 2;
 	nodeList[1].distToNeighbor[MAZE_WEST] = 72;
-	nodeList[1].neighbor[MAZE_SOUTH] = 8;
+	nodeList[1].neighbor[MAZE_SOUTH] = 10; // 8; we can't go from 1 to 8, no good checks
+	nodeList[1].distToNeighbor[MAZE_SOUTH] = 120;
 	nodeList[1].neighbor[MAZE_EAST] = 4;
 	
 	nodeList[2].neighbor[MAZE_EAST] = 1;
@@ -48,14 +49,14 @@ void AbingtonMaze::setup() {
 	nodeList[8].distToNeighbor[MAZE_EAST] = 23 + 5;
 	nodeList[8].neighbor[MAZE_SOUTH] = 10;
 	
-	// myNodeList[9].isRoom = true;
+	nodeList[9].isRoom = true;
 	nodeList[9].neighbor[MAZE_WEST] = 8;
 	
 	nodeList[10].neighbor[MAZE_NORTH] = 8;
 	nodeList[10].neighbor[MAZE_WEST] = 11;
 	nodeList[10].distToNeighbor[MAZE_WEST] = 23 + 5 + 10;
 	
-	// myNodeList[11].isRoom = true;
+	nodeList[11].isRoom = true;
 	nodeList[11].neighbor[MAZE_EAST] = 10;
 	
 	// define path
@@ -65,14 +66,29 @@ void AbingtonMaze::setup() {
 	pathList[3] = 3;
 	pathList[4] = 2;
 	pathList[5] = 1;
+	pathList[6] = 10;
+	pathList[7] = 11;
+	pathList[8] = 10;
+	pathList[9] = 8;
+	pathList[10] = 9;
+	pathList[11] = 8;
+	pathList[12] = 1;
+	pathList[13] = 0;
+	pathList[14] = 5;
+	pathList[15] = 6;
+	pathList[16] = 4;
+	pathList[17] = 7;
+
+
+	// pathList = { 0, 1, 2, 3, 2, 1, 10, 11, 10, 8, 9, 8, 1, 0, 5, 6, 4, 7 };
 	
 	// define room parameters
 	roomList[0].id = 7;
 	roomList[0].frontStopDistance = 23;
 	roomList[1].id = 3;
 	roomList[1].frontStopDistance = 40;
+	roomList[2].id = 11;
+	roomList[2].frontStopDistance = 40;
+	roomList[3].id = 3;
+	roomList[3].frontStopDistance = 100;
 }
-
-short AbingtonMaze::getNumNodes() { return 12; }
-short AbingtonMaze::getPathLength() { return 6; }
-short AbingtonMaze::getNumRooms() { return 2; }

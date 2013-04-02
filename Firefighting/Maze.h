@@ -3,8 +3,8 @@
 #include <Arduino.h>
 
 #define MAZE_NUM_NODES 12
-#define MAZE_PATH_LENGTH 6
-#define MAZE_NUM_ROOMS 2
+#define MAZE_PATH_LENGTH 18
+#define MAZE_NUM_ROOMS 4
 
 typedef struct {
 	short id;

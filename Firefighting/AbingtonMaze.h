@@ -5,9 +5,6 @@
 class AbingtonMaze : public Maze {
 	public:
 		void setup();		
-		short getNumNodes();
-		short getPathLength();
-		short getNumRooms();
 };
 
 #endif
