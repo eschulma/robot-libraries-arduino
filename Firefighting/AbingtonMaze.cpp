@@ -25,7 +25,7 @@ void AbingtonMaze::setup() {
 	nodeList[2].neighbor[MAZE_EAST] = 1;
 	nodeList[2].distToNeighbor[MAZE_EAST] = nodeList[1].distToNeighbor[MAZE_WEST];
 	nodeList[2].neighbor[MAZE_NORTH] = 3;
-	nodeList[2].distToNeighbor[MAZE_NORTH] = 23 + 5;
+	nodeList[2].distToNeighbor[MAZE_NORTH] = 46 + 5;
 	
 	nodeList[3].isRoom = true;
 	nodeList[3].neighbor[MAZE_SOUTH] = 2;
@@ -34,6 +34,7 @@ void AbingtonMaze::setup() {
 	nodeList[4].neighbor[MAZE_WEST] = 1;
 	nodeList[4].neighbor[MAZE_NORTH] = 7;
 	nodeList[4].neighbor[MAZE_EAST] = 6;
+	nodeList[4].distToNeighbor[MAZE_NORTH] = 46 + 5;
 	
 	nodeList[5].neighbor[MAZE_WEST] = 0;
 	nodeList[5].neighbor[MAZE_SOUTH] = 6;
@@ -43,21 +44,24 @@ void AbingtonMaze::setup() {
 	
 	nodeList[7].isRoom = true;
 	nodeList[7].neighbor[MAZE_SOUTH] = 4;
+	nodeList[7].distToNeighbor[MAZE_SOUTH] = nodeList[4].distToNeighbor[MAZE_NORTH];
 	
 	nodeList[8].neighbor[MAZE_NORTH] = 1;
 	nodeList[8].neighbor[MAZE_EAST]  = 9;
-	nodeList[8].distToNeighbor[MAZE_EAST] = 23 + 5;
+	nodeList[8].distToNeighbor[MAZE_EAST] = 46 + 5 + 20;
 	nodeList[8].neighbor[MAZE_SOUTH] = 10;
 	
 	nodeList[9].isRoom = true;
 	nodeList[9].neighbor[MAZE_WEST] = 8;
+	nodeList[9].distToNeighbor[MAZE_WEST] = nodeList[8].distToNeighbor[MAZE_EAST];
 	
 	nodeList[10].neighbor[MAZE_NORTH] = 8;
 	nodeList[10].neighbor[MAZE_WEST] = 11;
-	nodeList[10].distToNeighbor[MAZE_WEST] = 23 + 5 + 10;
+	nodeList[10].distToNeighbor[MAZE_WEST] = 46 + 5;
 	
 	nodeList[11].isRoom = true;
 	nodeList[11].neighbor[MAZE_EAST] = 10;
+	nodeList[11].distToNeighbor[MAZE_EAST] = nodeList[10].distToNeighbor[MAZE_WEST];
 	
 	// define path
 	pathList[0] = 0;
@@ -89,6 +93,6 @@ void AbingtonMaze::setup() {
 	roomList[1].frontStopDistance = 40;
 	roomList[2].id = 11;
 	roomList[2].frontStopDistance = 40;
-	roomList[3].id = 3;
-	roomList[3].frontStopDistance = 100;
+	roomList[3].id = 9;
+	roomList[3].frontStopDistance = 100;	// won't work for over 50...
 }

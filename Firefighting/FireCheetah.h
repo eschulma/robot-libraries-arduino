@@ -24,6 +24,7 @@
 #define FAN_CONTROL_PIN 27
 
 #define START_BUTTON_PIN 2
+#define AUDIO_START_PIN A11
 // note battery monitor not used now, this pin is in use
 #define BATTERY_MONITOR_PIN A15
 

@@ -44,7 +44,7 @@ void FireCheetah::setup() {
 		pinMode(wallRearSensorPin[i], INPUT);
 	}
 	pinMode(fireSensorPin, INPUT);
-	digitalWrite(fireSensorPin, HIGH);	// turns on internal pull-up resistor
+	// digitalWrite(fireSensorPin, HIGH);	// turns on internal pull-up resistor
 		
 	pinMode(fanControlPin, OUTPUT);
 	turnFanOn(false);
@@ -55,6 +55,7 @@ void FireCheetah::setup() {
 	
 	pinMode(START_BUTTON_PIN, INPUT);
 	digitalWrite(START_BUTTON_PIN, HIGH);
+	pinMode(AUDIO_START_PIN, INPUT);
 
 	wheelDiameter[ROBOT_LEFT] = 6.8; // 7.5; // cm, measured
 	wheelDiameter[ROBOT_RIGHT] = 6.7; // 7.4; // wheelDiameter[ROBOT_LEFT] ; //* 1.02;	// cm
@@ -114,8 +115,7 @@ void FireCheetah::setup() {
 
 	sideWallLossFactor = 0.7;	// higher number means we lose it at a nearer distance
 	// set this high for single room, as we know the fire is there!
-	fireThresholdReading = 800; // but this is a small room, and reflections off walls a problem.
-	fireThresholdReadingNear = 50;
+	fireThresholdReading = 300; // but this is a small room, and reflections off walls a problem.
 	
 	frontWallFoundDistance = 35;	// this relates to hallway width and stop distance
 	rearWallFoundDistance = 35;		// this relates to hallway width and stop distance

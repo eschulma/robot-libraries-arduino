@@ -17,6 +17,7 @@
 
 #define ROBOT_NO_FIRE_FOUND -1000
 #define ROBOT_NO_VALID_DATA -1001
+#define NO_SONAR_FRONT_WALL_SEEN 1000
 
 enum sonarLocation {
 	SONAR_FRONT = 0,
@@ -70,7 +71,6 @@ class FirefighterRobot {
 		float rightSideSlowFactor;
 		float leftSideSlowFactor;
 		short fireThresholdReading;
-		short fireThresholdReadingNear;
 		
 		float getSideWallDistanceReading(short direction) { return analogRead(wallSensorPin[direction]); };
 		float getSideWallRearDistanceReading(short direction) { return analogRead(wallRearSensorPin[direction]); };
@@ -80,7 +80,7 @@ class FirefighterRobot {
 		
 		void followWall(short direction, float velocityFactor, int idealWallSensorReading);
 
-		int panServoForFire(int startDegree, int endDegree, boolean bNearby);
+		int panServoForFire(int startDegree, int endDegree);
 		
 		float getFireReading();
 		
@@ -96,6 +96,7 @@ class FirefighterRobot {
 		boolean turn(double deltaHeading);
 		boolean align(short direction);
 		void backUp(float distance);	// go this distance in a straight line, forward or back only DEPRECATED
+		boolean isWayForwardBlocked();
 
 		void updateOdometry() { odom.update(); };
 		void markPosition() { odom.markPosition(); };
@@ -107,7 +108,7 @@ class FirefighterRobot {
 		void fightFire();		
 		float recover();
 
-		boolean isFire(boolean bNear);		
+		boolean isFire();
 		float getBatteryChargeLevel() { return batteryChargeLevel; };
 		// StallWatcher *getStallWatcher() { return stallWatcher; };
 		boolean isStalled() { return stallWatcher->isStalled(); };
@@ -121,6 +122,7 @@ class FirefighterRobot {
 		int getSideClosestToForwardObstacle();
 		
 		boolean isSideWallLost(short direction);
+		boolean isSideWallPresent(short direction);
 		float getFrontWallDistance();
 		float getSideWallDistance(short direction); // NOTE: this is slow!
 		boolean isAlignmentPossible(short direction, float maxDistance);

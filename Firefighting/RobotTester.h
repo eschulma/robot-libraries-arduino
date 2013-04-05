@@ -6,6 +6,7 @@
 #include <ControllerMotor.h>
 #include <FirefighterRobot.h>
 #include <FireCheetah.h>
+#include <Pilot.h>
 
 class RobotTester {
 	private:
@@ -60,17 +61,37 @@ void testNudgeToAlign() {
 }
 
 void testSegment() {
-	// can use pilot.setStart to start at arbitrary node
-	pilot.setStart(4, MAZE_EAST);
+	// can use pilot.setStart to start at arbitrary node; pathIndex, heading
+	pilot.setStart(13, MAZE_EAST);
 	pilot.setCourse();
 
-	Serial.print("Hallway width: ");
-	Serial.println(pilot.hallwayWidth);
+//	Serial.print("Hallway width: ");
+//	Serial.println(pilot.hallwayWidth);
 
-	while(pilot.go() == 0) {
-		;
-	}
-
+	boolean bContinue = true;
+	  while(bContinue) {
+	    int returnCode = pilot.go();
+	    if(returnCode > 0) {
+	      returnCode = pilot.setCourse();
+	      if(returnCode == PILOT_FIRE_EXTINGUISHED) {
+	        robot->stop();
+	        Serial.println("Success!!!");
+	        bContinue = false;
+	      }
+	      else if(returnCode < 0) {
+	        robot->stop();
+	        Serial.print("pilot.setCourse returned code ");
+	        Serial.println(returnCode);
+	        bContinue = false;
+	      }
+	    }
+	    else if(returnCode < 0) {
+	      robot->stop();
+	      Serial.print("pilot.go returned code ");
+	      Serial.println(returnCode);
+	      bContinue = false;
+	    }
+	  }
 	robot->stop();
 }
 
@@ -202,13 +223,10 @@ void testCircling() {
 }
 
 void testTurning() {
-  long leftTicks, rightTicks;
   robot->resetOdometers();
 
-  robot->turn(PI/2.0);
+  robot->turn(-PI/2.0);
   robot->stop();
-  leftTicks = robot->getOdometerValue(ROBOT_LEFT);
-  rightTicks = robot->getOdometerValue(ROBOT_RIGHT);
   Serial.println("Ticks right after stop: ");
   printEncoderTicks();
 
@@ -404,17 +422,19 @@ int testPanServoForFire() {
 		degrees -= 5;
 		robot->setFanServo(degrees);
 		
-		if(robot->isFire(false)) {
+		if(robot->isFire()) {
 			// triple check
 			delay(100);
-			if(robot->isFire(false)) {
+			if(robot->isFire()) {
 				delay(100);
-				if(robot->isFire(false)) {
+				if(robot->isFire()) {
 					fireFound = true;
 					break;
 				}
 			}
 		}
+		delay(100);
+		Serial.println(robot->getFireReading());
 	}	
 	
 	if(fireFound) {		
@@ -463,6 +483,9 @@ int testPanServoForFire() {
 		delay(2000);
 		return fireDegrees;
 	}	
+	else {
+		Serial.println("No fire found.");
+	}
 	
 	robot->setFanServo(0);
 	return ROBOT_NO_FIRE_FOUND;	// NOT 0 as we may be facing the fire!
@@ -479,10 +502,15 @@ void testPutOutFire() {
 	
 		// face the right direction
 		robot->setFanServo(0);
-		robot->turn(degrees * DEG_TO_RAD);
+		robot->turn((double)(degrees + 10.0) * DEG_TO_RAD);
+		robot->stop();
 		delay(500);
 		
 		robot->fightFire();
+
+//		while(robot->isFire()) {
+//			robot->fightFire();
+//		}
 	}
 }
 
@@ -494,16 +522,22 @@ void testApproachAndPan() {
   } */
   robot->stop();  
   robot->turn(90 * DEG_TO_RAD);
+  robot->stop();
   delay(500);
   robot->turn(-180 * DEG_TO_RAD);
+  robot->stop();
   delay(500);
   robot->turn(180 * DEG_TO_RAD);
+  robot->stop();
   delay(500);
   robot->turn(-180 * DEG_TO_RAD);
+  robot->stop();
   delay(500);
   robot->turn(180 * DEG_TO_RAD);
+  robot->stop();
   delay(500);
   robot->turn(-90 * DEG_TO_RAD);
+  robot->stop();
 }
 
 };

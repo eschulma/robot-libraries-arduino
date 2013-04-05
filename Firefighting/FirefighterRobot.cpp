@@ -214,7 +214,7 @@ void FirefighterRobot::driveTowardGoal(float velocityFactor) {
 
 /**
 * Turn in place until we have changed heading the specified number of radians. Return true for
-* success.
+* success. User must call stop() when this is done.
 */
 boolean FirefighterRobot::turn(double headingChange) {
 	// safeguard against backwards turn
@@ -437,10 +437,6 @@ int FirefighterRobot::getSideClosestToForwardObstacle() {
 	long wallReading[2];
 	for(int i = 0; i < 2; i++) {
 		wallReading[i] = getSideWallDistanceReading(i);
-		// IR sensors do seem to return 0 when nothing seen...complicates things
-		if(wallReading[i] == 0) {
-			wallReading[i] = 10000;
-		}
 	}
 
 	int closeSide = ROBOT_LEFT;
@@ -516,6 +512,24 @@ boolean FirefighterRobot::isSideWallLost(short direction) {
 		}
 	}
 	return false;
+}
+
+/**
+ * Use sonar (the one furthest back) to tell us if we are next to a wall on the side.
+ */
+boolean FirefighterRobot::isSideWallPresent(short direction) {
+	boolean bWallFound = false;
+
+	sonarLocation loc = SONAR_LEFT_R;
+	if(direction == ROBOT_RIGHT) {
+		loc = SONAR_RIGHT_R;
+	}
+
+	if(getSonarDistance(loc) != ROBOT_NO_VALID_DATA) {
+		bWallFound = true;
+	}
+
+	return bWallFound;
 }
 
 /**
@@ -596,7 +610,7 @@ float FirefighterRobot::getMisalignment(short direction) {
 }
 
 /**
- *	Line up robot parallel to wall. We could use the boolean to say if this was
+ *	Line up robot parallel to wall. We use the boolean to say if this was
  *	possible or successful. Right now, no safety checks.
  */
 boolean FirefighterRobot::align(short direction) {
@@ -646,7 +660,15 @@ float FirefighterRobot::getMisalignmentAngle(short direction) {
  		Serial.println(y);
  		return ROBOT_NO_VALID_DATA;
  	}
+
+ 	if(sensorSpacing == 0) {
+ 		Serial.println("Sensor spacing was zero -- corrupted memory!!!!");
+ 	}
   
+ 	/***
+ 	 * Now actually...I am fairly certain this should be atan2, not asin. The difficulty
+ 	 * is that we end up with a terribly unstable value that way.
+ 	 */
  	float theta = asin(y/sensorSpacing);
  	theta = atan2(sin(theta), cos(theta));
   
@@ -667,15 +689,15 @@ float FirefighterRobot::getMisalignmentAngle(short direction) {
 }
 
 /**
- * To make simple comparisons easier for callers, we return 1000 when no
- * wall is seen.
+ * To make simple comparisons easier for callers, we return NO_SONAR_FRONT_WALL_SEEN
+ * (a high positive number) when no wall is seen.
  */
 float FirefighterRobot::getFrontWallDistance() {
 	float value = getSonarDistance(SONAR_FRONT);
 
 	// Ping library returns 0 when outside of max distance
 	if((value == 0) || (value == ROBOT_NO_VALID_DATA)) {
-		value = 1000;
+		value = NO_SONAR_FRONT_WALL_SEEN;
 	}
 	return value;
 }
@@ -813,23 +835,29 @@ float FirefighterRobot::getCalculatedWallEnd(short direction) {
 float FirefighterRobot::getFireReading() {
 	float reading = 0;
 	for(int i = 0; i < 5; i++) {
-		reading += analogRead(fireSensorPin);
+		reading += (float)analogRead(fireSensorPin);
 		delay(10);
 	}
 	reading /= 5.0;
 	return reading;
 }
 
-boolean FirefighterRobot::isFire(boolean bNear) {
+boolean FirefighterRobot::isFire() {
 	float reading = getFireReading();
-	if((!bNear) && (reading < fireThresholdReading)) {
-		return true;
-	}
-	if(bNear && (reading < fireThresholdReadingNear)) {
+	if(reading < fireThresholdReading) {
 		return true;
 	}
 	return false;
 }
+
+//boolean FirefighterRobot::isFireOut() {
+//	float reading = getFireReading();
+//	float threshold = fireThresholdReading + 100.0;
+//	if(reading > threshold) {
+//		return true;
+//	}
+//	return false;
+//}
 
 void FirefighterRobot::setFanServo(short degrees) {
 	if(degrees < -180) {
@@ -845,13 +873,13 @@ void FirefighterRobot::setFanServo(short degrees) {
 }
 
 int FirefighterRobot::panServoForFire() {
-	return panServoForFire(90, -180, false);
+	return panServoForFire(90, -180);
 }
 
-int FirefighterRobot::panServoForFire(int startDegree, int endDegree, boolean bNear) {
+int FirefighterRobot::panServoForFire(int startDegree, int endDegree) {
 	// only go one way
 	if(endDegree > startDegree) {
-		float temp = startDegree;
+		int temp = startDegree;
 		startDegree = endDegree;
 		endDegree = temp;
 	}
@@ -863,25 +891,14 @@ int FirefighterRobot::panServoForFire(int startDegree, int endDegree, boolean bN
 	delay(750);	// let it get all the way there!
 	delay(500); 	// and, let fire sensor settle down --VERY IMPORTANT!!
 	
+	// scan quickly until a fire is detected, then slow down
 	while(degrees > endDegree) {
 		delay(60);
 		degrees -= 5;
 		setFanServo(degrees);
 		
-		/* for single room, no triple check needed
-		if(isFire(false)) {
-			// triple check
-			delay(100);
-			if(isFire(false)) {
-				delay(100);
-				if(isFire(false)) {
-					fireFound = true;
-					break;
-				}
-			}
-		} */
-		
-		if(isFire(false)) {
+		if(isFire()) {
+			// double-checking does not seem to work
 			fireFound = true;
 			break;
 		}
@@ -890,8 +907,8 @@ int FirefighterRobot::panServoForFire(int startDegree, int endDegree, boolean bN
 	if(fireFound) {		
 		Serial.print("Initial fire found at ");
 		Serial.println(degrees);
-		// Serial.print("Fire reading: ");
-		// Serial.println(getFireReading());
+		Serial.print("Fire reading: ");
+		Serial.println(getFireReading());
 	}	
 	
 	short fireDegrees = degrees;
@@ -937,40 +954,15 @@ int FirefighterRobot::panServoForFire(int startDegree, int endDegree, boolean bN
 	return ROBOT_NO_FIRE_FOUND;	// NOT 0 as we may be facing the fire!
 }
 
-/* 
-int FirefighterRobot::panServoForFire(int startDegree, int endDegree, boolean bNear) {
-	int degrees = startDegree;
-	
-	float delayTime = fabs(startDegree - fanServoDegrees) * 20;
-	setFanServo(degrees);
-	delay(delayTime);	// let it get all the way there!
-	
-	if(endDegree < startDegree) {
-		while((!isFire(bNear)) && (degrees > endDegree)) {
-			delay(30);
-			degrees -= 1;
-			setFanServo(degrees);
-		}	
-	}
-	else {
-		while((!isFire(bNear)) && (degrees < endDegree)) {
-			delay(30);
-			degrees += 1;
-			setFanServo(degrees);
-		}	
-	}
-	
-	if(isFire(bNear)) {
-		return degrees;
-	}
-	
-	setFanServo(0);
-	return ROBOT_NO_FIRE_FOUND;
-} */
-
-
 /**
  *	Robot should be facing the fire when this is called.
+ *
+ *	Sunlight can mess with the fire sensor; if there is a sunny
+ *	window in the room, it can may put out a stronger signal than the
+ *	candle!
+ *
+ *	The rules require that we be within 12 inches (30.48 cm) of the candle
+ *	before extinguishing it.
  */
 void FirefighterRobot::fightFire() {
 	resetStallWatcher();
@@ -983,7 +975,6 @@ void FirefighterRobot::fightFire() {
 		odom.markPosition();
 		setGoal(25, 0);
 
-		// TODO: remove the delay when sonar no longer requires it
 		while((!isStalled()) && (getFrontWallDistance() > 25) && (odom.getDistanceFromMarkedPoint() < 25)) {
 			driveTowardGoal();
 			odom.update();
@@ -993,16 +984,15 @@ void FirefighterRobot::fightFire() {
  	 	
  	 	// we've gone as far as we want to using straight travel
  	 	// we can stop slightly further out, though, if needed
- 	 	if(getFrontWallDistance() > 35) {
-	 	 	int degreesOff = panServoForFire(45, -45, true);
+ 	 	if(getFrontWallDistance() > 25) {
+	 	 	int degreesOff = panServoForFire(45, -45);
 	 	 	if(degreesOff == ROBOT_NO_FIRE_FOUND) {
-	 	 		degreesOff = panServoForFire(130, -130, true);
+	 	 		degreesOff = panServoForFire(130, -130);
 	 	 	}
 	 	 	if(degreesOff != ROBOT_NO_FIRE_FOUND) {
-		 	 	if(fabs(degreesOff) > 5) {
-	 		 		turn(degreesOff * DEG_TO_RAD);
-	 		 		delay(250);
-	 		 	}
+ 		 		turn((double)(degreesOff + 10.0) * DEG_TO_RAD);
+ 		 		stop();
+ 		 		delay(250);
 	 		}
 	 		else {
 	 			Serial.println("Lost our fire!");
@@ -1015,28 +1005,89 @@ void FirefighterRobot::fightFire() {
  		resetStallWatcher();
  	}
   
-  stop();
-  turnFanOn(true);
-  
-  int degrees = 45;
-  setFanServo(degrees); 
-  delay(500);
-  
-  for(int i = 0; i < 5; i++) {
-	  while(degrees > -65) {
-  		delay(60);
-  		degrees -= 5;
-  		setFanServo(degrees);
- 	 	}
-  	while(degrees < 65) {
-  		delay(60);
-  		degrees += 5;
-  		setFanServo(degrees);
-  	}
-  }
-  
-  turnFanOn(false);
-  setFanServo(0);
+ 	stop();
+
+ 	// center servo on fire
+ 	int degrees = panServoForFire(45, -45);
+ 	if(degrees == ROBOT_NO_FIRE_FOUND) {
+ 		degrees = panServoForFire(130, -130);
+ 	}
+ 	if(degrees != ROBOT_NO_FIRE_FOUND) {
+ 		setFanServo(degrees);
+ 	}
+ 	else {
+ 		setFanServo(0);
+ 		// we didn't find the fire???
+ 		Serial.println("Lost the fire?!?!");
+ 	}
+
+ 	float thisFireReadingThreshold = getFireReading() + 300.0;
+ 	thisFireReadingThreshold = max(thisFireReadingThreshold, fireThresholdReading);
+
+ 	// just a straight blast first
+ 	turnFanOn(true);
+ 	delay(10);
+
+ 	// fan for 15 seconds, or until the fire is out
+ 	float reading;
+ 	for(int i = 0; i < 150; i++) {
+ 		delay(100);
+ 		reading = getFireReading();
+ 		if(reading >  thisFireReadingThreshold) {
+ 			delay(1000);
+ 			// double check
+ 			reading = getFireReading();
+ 			if(reading > thisFireReadingThreshold) {
+ 				Serial.println("Fire is out!");
+ 				// give it another few s to make sure the fire is really out!
+ 				delay(3000);
+ 				break;
+ 			}
+ 			else {
+ 				// we delayed 1000 for nothing
+ 				i += 6;
+ 			}
+ 		}
+ 	}
+ 	Serial.print("final reading: ");
+ 	Serial.println(reading);
+ 	turnFanOn(false);
+
+ 	// still got a fire?
+ 	delay(5000);
+ 	degrees = panServoForFire();
+ 	if(degrees != ROBOT_NO_FIRE_FOUND) {
+ 		turn((double)degrees * DEG_TO_RAD);
+ 		stop();
+ 		delay(250);
+
+ 		turnFanOn(true);
+ 		degrees = 45;
+ 		setFanServo(degrees);
+
+ 		// straight blast initially
+ 		delay(500);
+ 		if(degrees != 0) {
+ 			delay(5000);
+ 		}
+
+ 		// sweep fan while blowing
+ 		for(int i = 0; i < 5; i++) {
+ 			while(degrees > -65) {
+ 				delay(60);
+ 				degrees -= 5;
+ 				setFanServo(degrees);
+ 			}
+ 			while(degrees < 65) {
+ 				delay(60);
+ 				degrees += 5;
+ 				setFanServo(degrees);
+ 			}
+ 		}
+
+ 		turnFanOn(false);
+ 		setFanServo(0);
+ 	} // if fire found
 }
 
 void FirefighterRobot::resetCalculatedMovePWMs() {
@@ -1081,4 +1132,19 @@ float FirefighterRobot::recover() {
 	resetStallWatcher();
 
 	return angleTurned;
+}
+
+boolean FirefighterRobot::isWayForwardBlocked() {
+	boolean isBlocked = false;
+
+	delay(50);
+	if(getFrontWallDistance() < 5) {
+		isBlocked = true;
+	}
+	else if(max(getSideWallDistanceReading(ROBOT_LEFT), getSideWallDistanceReading(ROBOT_RIGHT)) > 550) {
+		Serial.println("Way forward blocked!");
+		isBlocked = true;
+	}
+
+	return isBlocked;
 }
