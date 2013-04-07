@@ -11,6 +11,7 @@ Pilot::Pilot(Maze* inMaze, FirefighterRobot* inRobot, mazeHeading startHeading){
 
 	followMethod = PILOT_FOLLOW_NONE;
 	nodeCheck = PILOT_CHECK_FORWARD;
+	bSwitchAfterWallCheck = false;
 }
 
 void Pilot::setStart(short startPathIndex, mazeHeading startHeading) {
@@ -22,19 +23,7 @@ boolean Pilot::fightFire() {
 	Serial.println("Checking for fire!");
 	int degrees = robot->panServoForFire();
 	if(degrees != ROBOT_NO_FIRE_FOUND) {
-		Serial.print("degrees to turn: ");
-		Serial.println(degrees);
-		
-		// let me see what's happening
-		// delay(2000);
-	
-		// face the right direction
-		robot->setFanServo(0);
-		robot->turn(degrees * DEG_TO_RAD);
-		robot->stop();
-		delay(500);
-		
-		robot->fightFire();
+		robot->fightFire(degrees);
 		robot->stop();
 		return true;
 	}
@@ -50,13 +39,13 @@ boolean Pilot::fightFire() {
 int Pilot::setCourse() {
 	currentNode = maze->getPathNode(pathIndex);
 
-	// TODO: put back when testing is done!!
-/*	if(currentNode.isRoom) {
+	// put back when testing is done!!
+    if(currentNode.isRoom) {
 		boolean success = fightFire();
 		if(success) {
 			return PILOT_FIRE_EXTINGUISHED;
 		}
-	} */
+	}
 
 	if(pathIndex >= maze->getPathLength() - 1) {
 		// we are at the last node..and failed to find the fire, presumably.
@@ -301,9 +290,19 @@ int Pilot::setCourse() {
 		delay(500);	// delays after turns are important
 	}
 
-	if(followMethod == PILOT_FOLLOW_NONE) {
+	// if we are using wall checks, switch to forward check when wall lost, if possible
+	// only applies to approach for node 10 right now
+	bSwitchAfterWallCheck = false;
+	if((nextNode.neighbor[heading] == MAZE_WALL) &&
+			((nodeCheck == PILOT_CHECK_LEFT) || (nodeCheck == PILOT_CHECK_RIGHT))) {
+		Serial.println("Will use front sonar to go forward after wall loss.");
+		bSwitchAfterWallCheck = true;
+	}
+
+
+	if((followMethod == PILOT_FOLLOW_NONE) || (bSwitchAfterWallCheck)) {
 		// set a goal so we drive forward
-		robot->setGoal(distanceToNext + maze->getNodeRadius() + 50, 0);
+		robot->setGoal(1000, 0);
 	}
 		
 	robot->resetOdometers();
@@ -342,7 +341,7 @@ void Pilot::changeHeading(mazeHeading currentHeading, mazeHeading newHeading) {
 		robot->stop();
 		delay(500);
 
-		float my90 = 90 * DEG_TO_RAD;
+		double my90 = 90 * DEG_TO_RAD;
 	
 		if(delta == 1) {
 			// new heading is to the right
@@ -354,11 +353,11 @@ void Pilot::changeHeading(mazeHeading currentHeading, mazeHeading newHeading) {
 		}
 		else {
 			// turn around
-			robot->turn(90+my90);
+			robot->turn(2.0 * my90);
 		}
 		// let motors settle
 		robot->stop();
-		delay(3 * 500); // important!
+		delay(500); // important! (was 1500)
 	}
 	else {
 		Serial.println("No heading change.");
@@ -526,7 +525,16 @@ int Pilot::go() {
 						if((!bTurnDone) || (robot->isSideWallLost(wallSide))) {
 							Serial.print("Lost wall: ");
 							Serial.println(wallSide);
-							nudgeForwardAfterWallLoss(wallSide);
+
+							if(!bSwitchAfterWallCheck) {
+								nudgeForwardAfterWallLoss(wallSide);
+							}
+							else {
+								Serial.println("Switching to forward check.");
+								followMethod = PILOT_FOLLOW_NONE;
+								nodeCheck = PILOT_CHECK_FORWARD;
+								return 0;
+							}
 							return 1;
 						}
 						else {
@@ -584,14 +592,6 @@ void Pilot::nudgeForwardAfterWallLoss(short wallDirection) {
 	float fudgeFactor = 3.0;
 
 	float nudgeDistance = robot->getCalculatedWallEnd(wallDirection) + (hallwayWidth / 2.0) + fudgeFactor;
-	// if we are facing a wall, use sonar to get a more exact value
-	if(nextNode.neighbor[heading] == MAZE_WALL) {
-		float distance = robot->getFrontWallDistance();
-		if((distance > 0) && (distance < 50)) {
-			Serial.println("Using front sonar to go forward after wall loss.");
-			nudgeDistance = distance - (hallwayWidth / 2.0);
-		}
-	}
 
 	robot->move(nudgeDistance, 0);
 	robot->stop();

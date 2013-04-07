@@ -655,7 +655,7 @@ float FirefighterRobot::getMisalignmentAngle(short direction) {
 //  Serial.println(y);
 
 	// got back garbage from diff function
- 	if(fabs(y) > 160) {
+ 	if(fabs(y) > 100) {
  		Serial.print("getMisalignment returned too high a value: ");
  		Serial.println(y);
  		return ROBOT_NO_VALID_DATA;
@@ -668,8 +668,23 @@ float FirefighterRobot::getMisalignmentAngle(short direction) {
  	/***
  	 * Now actually...I am fairly certain this should be atan2, not asin. The difficulty
  	 * is that we end up with a terribly unstable value that way.
+ 	 *
+ 	 * Since we are using asin, I need to constrain the output.
+ 	 * OLD: if fabs(y) was greater than sensorSpacing, return NaN which leads to
+ 	 * no action being taken.
  	 */
- 	float theta = asin(y/sensorSpacing);
+ 	float theta;
+ 	if(y > sensorSpacing) {
+ 		theta = 30.0 * DEG_TO_RAD;
+ 	}
+ 	else if(y < -sensorSpacing) {
+ 		theta = -30.0 * DEG_TO_RAD;
+ 	}
+ 	else {
+ 		theta = asin(y/sensorSpacing);
+ 	}
+
+ 	// wrap with atan2 for safety
  	theta = atan2(sin(theta), cos(theta));
   
 //  Serial.print("diff: ");
@@ -964,7 +979,30 @@ int FirefighterRobot::panServoForFire(int startDegree, int endDegree) {
  *	The rules require that we be within 12 inches (30.48 cm) of the candle
  *	before extinguishing it.
  */
-void FirefighterRobot::fightFire() {
+void FirefighterRobot::fightFire(int initDegrees) {
+	resetStallWatcher();
+
+	Serial.print("degrees to turn: ");
+	Serial.println(initDegrees);
+
+	/**
+	 * There is a difference between candles right in front of us and those
+	 * far off to the right. For the former, we have to worry about hitting the
+	 * left wall (theta too high) and for the latter we have to worry about hitting
+	 * the right wall once we get there (theta too low).
+	 */
+	int firstDegreeOffset = 0;
+	int degreeOffset = 10; // good for ones to the right
+	if(fabs(initDegrees) < 15) {
+		degreeOffset = 0;
+	}
+
+	// face the right direction
+	setFanServo(0);
+	turn((double)(initDegrees + firstDegreeOffset) * DEG_TO_RAD);
+	stop();
+	delay(500);
+
 	resetStallWatcher();
 
 	// drive to candle, re-centering every 25 cm
@@ -975,22 +1013,29 @@ void FirefighterRobot::fightFire() {
 		odom.markPosition();
 		setGoal(25, 0);
 
-		while((!isStalled()) && (getFrontWallDistance() > 25) && (odom.getDistanceFromMarkedPoint() < 25)) {
+		while((!isStalled()) && (getFrontWallDistance() > 20) && (odom.getDistanceFromMarkedPoint() < 25)) {
 			driveTowardGoal();
 			odom.update();
 			delay(50);
  	 	}	
  	 	stop();
- 	 	
+
+ 	 	if(isStalled()) {
+ 	 		// minimal recovery
+ 	 		resetStallWatcher();
+ 	 		backUp(2.0);
+ 	 		resetStallWatcher();
+ 	 	}
+
  	 	// we've gone as far as we want to using straight travel
  	 	// we can stop slightly further out, though, if needed
- 	 	if(getFrontWallDistance() > 25) {
+ 	 	if(getFrontWallDistance() > 20) {
 	 	 	int degreesOff = panServoForFire(45, -45);
 	 	 	if(degreesOff == ROBOT_NO_FIRE_FOUND) {
 	 	 		degreesOff = panServoForFire(130, -130);
 	 	 	}
 	 	 	if(degreesOff != ROBOT_NO_FIRE_FOUND) {
- 		 		turn((double)(degreesOff + 10.0) * DEG_TO_RAD);
+ 		 		turn((double)(degreesOff + degreeOffset) * DEG_TO_RAD);
  		 		stop();
  		 		delay(250);
 	 		}
@@ -1001,8 +1046,10 @@ void FirefighterRobot::fightFire() {
  	}
  	
  	if(isStalled()) {
- 		// no recovery
- 		resetStallWatcher();
+		// minimal recovery
+		resetStallWatcher();
+		backUp(2.0);
+		resetStallWatcher();
  	}
   
  	stop();
@@ -1022,15 +1069,17 @@ void FirefighterRobot::fightFire() {
  	}
 
  	float thisFireReadingThreshold = getFireReading() + 300.0;
- 	thisFireReadingThreshold = max(thisFireReadingThreshold, fireThresholdReading);
+ 	thisFireReadingThreshold = max(thisFireReadingThreshold, fireOutReading);
 
  	// just a straight blast first
  	turnFanOn(true);
- 	delay(10);
 
- 	// fan for 15 seconds, or until the fire is out
+ 	// fan for 5 seconds no matter what
+ 	delay(5000);
+
+ 	// fan for another 10 seconds, or until the fire is out
  	float reading;
- 	for(int i = 0; i < 150; i++) {
+ 	for(int i = 0; i < 100; i++) {
  		delay(100);
  		reading = getFireReading();
  		if(reading >  thisFireReadingThreshold) {
@@ -1038,7 +1087,8 @@ void FirefighterRobot::fightFire() {
  			// double check
  			reading = getFireReading();
  			if(reading > thisFireReadingThreshold) {
- 				Serial.println("Fire is out!");
+ 				Serial.print("Fire is out!  ");
+ 				Serial.println(reading);
  				// give it another few s to make sure the fire is really out!
  				delay(3000);
  				break;
@@ -1054,24 +1104,29 @@ void FirefighterRobot::fightFire() {
  	turnFanOn(false);
 
  	// still got a fire?
- 	delay(5000);
+ 	if(isFire()) {
+ 		delay(10);	// don't bother waiting much
+ 	}
+ 	else {
+ 		delay(5000);
+ 	}
  	degrees = panServoForFire();
  	if(degrees != ROBOT_NO_FIRE_FOUND) {
- 		turn((double)degrees * DEG_TO_RAD);
+ 		turn((double)(degrees + degreeOffset) * DEG_TO_RAD);
  		stop();
  		delay(250);
 
  		turnFanOn(true);
- 		degrees = 45;
- 		setFanServo(degrees);
 
  		// straight blast initially
- 		delay(500);
  		if(degrees != 0) {
  			delay(5000);
  		}
 
  		// sweep fan while blowing
+ 		degrees = 45;
+ 		setFanServo(degrees);
+ 		delay(500);
  		for(int i = 0; i < 5; i++) {
  			while(degrees > -65) {
  				delay(60);

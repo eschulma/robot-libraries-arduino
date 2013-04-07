@@ -71,6 +71,7 @@ class FirefighterRobot {
 		float rightSideSlowFactor;
 		float leftSideSlowFactor;
 		short fireThresholdReading;
+		short fireOutReading;
 		
 		float getSideWallDistanceReading(short direction) { return analogRead(wallSensorPin[direction]); };
 		float getSideWallRearDistanceReading(short direction) { return analogRead(wallRearSensorPin[direction]); };
@@ -105,7 +106,7 @@ class FirefighterRobot {
 		void setFanServo(short degrees);	// 0 is pointing forward
 		void turnFanOn(boolean on);
 		int panServoForFire();
-		void fightFire();		
+		void fightFire(int initDegrees);
 		float recover();
 
 		boolean isFire();

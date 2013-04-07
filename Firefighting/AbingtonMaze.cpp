@@ -57,7 +57,7 @@ void AbingtonMaze::setup() {
 	
 	nodeList[10].neighbor[MAZE_NORTH] = 8;
 	nodeList[10].neighbor[MAZE_WEST] = 11;
-	nodeList[10].distToNeighbor[MAZE_WEST] = 46 + 5;
+	nodeList[10].distToNeighbor[MAZE_WEST] = 46 + 5 + 5;
 	
 	nodeList[11].isRoom = true;
 	nodeList[11].neighbor[MAZE_EAST] = 10;

@@ -33,6 +33,7 @@ class Pilot {
 		pilotFollowMethod followMethod;
 		long lastPingTime;
 		float hallwayWidth;
+		boolean bSwitchAfterWallCheck;
 		
 		void changeHeading(mazeHeading currentHeading, mazeHeading newHeading);		
 		void nudgeForwardAfterWallLoss(short wallDirection);

@@ -62,7 +62,7 @@ void testNudgeToAlign() {
 
 void testSegment() {
 	// can use pilot.setStart to start at arbitrary node; pathIndex, heading
-	pilot.setStart(13, MAZE_EAST);
+	pilot.setStart(5, MAZE_SOUTH);
 	pilot.setCourse();
 
 //	Serial.print("Hallway width: ");
@@ -323,21 +323,25 @@ void testFrontSonar() {
 	}
 }
 
-void testSonarPair() {
-	Serial.println("Testing sonar right.");
-
-	sonarLocation front = SONAR_RIGHT_F;
-	sonarLocation rear = SONAR_RIGHT_R;
-
+void testSonar() {
 	while(1) {
-		float distanceF = robot->sonar[front]->ping_cm();
+		float distanceLF = robot->sonar[SONAR_LEFT_F]->ping_cm();
+		float distanceRF = robot->sonar[SONAR_RIGHT_R]->ping_cm();
 		delay(100);
-		float distanceR = robot->sonar[rear]->ping_cm();
+		float distanceLR = robot->sonar[SONAR_LEFT_R]->ping_cm();
+		float distanceRR = robot->sonar[SONAR_RIGHT_R]->ping_cm();
+		float distanceF = robot->sonar[SONAR_FRONT]->ping_cm();
 		delay(100);
 
 		Serial.print(distanceF);
+		Serial.print("  |  ");
+		Serial.print(distanceLF);
 		Serial.print("    ");
-		Serial.println(distanceR);
+		Serial.print(distanceLR);
+		Serial.print("  |  ");
+		Serial.print(distanceRF);
+		Serial.print("    ");
+		Serial.println(distanceRR);
 	}
 }
 
@@ -494,19 +498,7 @@ int testPanServoForFire() {
 void testPutOutFire() {
 	int degrees = robot->panServoForFire();
 	if(degrees != ROBOT_NO_FIRE_FOUND) {
-		Serial.print("degrees to turn: ");
-		Serial.println(degrees);
-		
-		// let me see what's happening
-		delay(2000);
-	
-		// face the right direction
-		robot->setFanServo(0);
-		robot->turn((double)(degrees + 10.0) * DEG_TO_RAD);
-		robot->stop();
-		delay(500);
-		
-		robot->fightFire();
+		robot->fightFire(degrees);
 
 //		while(robot->isFire()) {
 //			robot->fightFire();
