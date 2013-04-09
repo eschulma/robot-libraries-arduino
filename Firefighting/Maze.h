@@ -29,6 +29,7 @@ enum mazeHeading {
 
 #define MAZE_WALL -1
 #define MAZE_OPEN_SPACE -2
+#define MAZE_RETURN_PATH_LENGTH 17
 
 class Maze {
 	private:
@@ -36,6 +37,7 @@ class Maze {
 	protected:
 		mapNode nodeList[MAZE_NUM_NODES];
 		short pathList[MAZE_PATH_LENGTH];
+		short returnPathList[MAZE_RETURN_PATH_LENGTH];
 		roomNode roomList[MAZE_NUM_ROOMS];
 	
 		float nodeRadius;
@@ -45,8 +47,10 @@ class Maze {
 		short getNumNodes() { return MAZE_NUM_NODES; };
 		short getNumRooms() { return MAZE_NUM_ROOMS; };
 		short getPathLength() { return MAZE_PATH_LENGTH; };
+		short getReturnPathLength() { return MAZE_RETURN_PATH_LENGTH; };
 
 		mapNode getPathNode(short pathIndex);
+		mapNode getReturnPathNode(short pathIndex);
 		boolean isRoom(short nodeIndex) { return nodeList[nodeIndex].isRoom; };
 		float getNodeRadius() { return nodeRadius; };
 		float getHallwayWidth();

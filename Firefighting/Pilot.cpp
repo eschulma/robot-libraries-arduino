@@ -12,6 +12,7 @@ Pilot::Pilot(Maze* inMaze, FirefighterRobot* inRobot, mazeHeading startHeading){
 	followMethod = PILOT_FOLLOW_NONE;
 	nodeCheck = PILOT_CHECK_FORWARD;
 	bSwitchAfterWallCheck = false;
+	bGoingHome = false;
 }
 
 void Pilot::setStart(short startPathIndex, mazeHeading startHeading) {
@@ -21,6 +22,18 @@ void Pilot::setStart(short startPathIndex, mazeHeading startHeading) {
 
 boolean Pilot::fightFire() {
 	Serial.println("Checking for fire!");
+	// save coords so we can return later
+	roomEntryX = robot->getX();
+	roomEntryY = robot->getY();
+	roomEntryHeading = robot->getHeading();
+
+	Serial.print("Room entry coordinates: ");
+	Serial.print(roomEntryX);
+	Serial.print(", ");
+	Serial.print(roomEntryY);
+	Serial.print(", ");
+	Serial.println(roomEntryHeading);
+
 	int degrees = robot->panServoForFire();
 	if(degrees != ROBOT_NO_FIRE_FOUND) {
 		robot->fightFire(degrees);
@@ -37,28 +50,95 @@ boolean Pilot::fightFire() {
  *
  **/
 int Pilot::setCourse() {
-	currentNode = maze->getPathNode(pathIndex);
+	if(bGoingHome) {
+		Serial.println("Heading home.");
+		currentNode = maze->getReturnPathNode(returnPathIndex);
+	}
+	else {
+		Serial.println("Looking for candle.");
+		currentNode = maze->getPathNode(pathIndex);
+	}
+
+	if((bGoingHome) && (currentNode.id == 0)) {
+		return PILOT_RETURNED_HOME;
+	}
 
 	// put back when testing is done!!
     if(currentNode.isRoom) {
-		boolean success = fightFire();
-		if(success) {
-			return PILOT_FIRE_EXTINGUISHED;
+    	if(!bGoingHome) {
+			boolean success = fightFire();
+			if(success) {
+				return PILOT_FIRE_EXTINGUISHED;
+			}
+    	}
+    	else {
+    		Serial.println("Beginning trip home.");
+
+    		// may be close to a wall -- check
+    		float wallDistance = robot->getSideWallDistance(ROBOT_LEFT);
+    		if((wallDistance != ROBOT_NO_VALID_DATA) && (wallDistance < 10.0)) {
+    			robot->turn(15.0 * DEG_TO_RAD);
+    			robot->stop();
+    			robot->backUp(10.0);
+    			robot->stop();
+    		}
+    		else {
+        		wallDistance = robot->getSideWallDistance(ROBOT_RIGHT);
+        		if((wallDistance != ROBOT_NO_VALID_DATA) && (wallDistance < 10.0)) {
+        			robot->turn(-15.0 * DEG_TO_RAD);
+        			robot->stop();
+        			robot->backUp(10.0);
+        			robot->stop();
+        		}
+    		}
+
+    		// move to the entry spot
+    		robot->goToGoal(roomEntryX, roomEntryY);
+    		robot->stop();
+
+    		// turn so we are facing 180 from where we entered
+    		double desiredHeading = roomEntryHeading + PI;
+    		desiredHeading = atan2(sin(desiredHeading), cos(desiredHeading));
+    		double currentHeading = robot->getHeading();
+    		robot->turn(desiredHeading - currentHeading);
+    		robot->stop();
+
+    		// update heading appropriately
+    		heading = (mazeHeading)((heading + 2) % 4);
+    	}
+	}
+
+    if(!bGoingHome) {
+		if(pathIndex >= maze->getPathLength() - 1) {
+			// we are at the last node..and failed to find the fire, presumably.
+			// we stop at second to last path index because setCourse includes the next node
+			Serial.println("Finished course, no joy.");
+			return -1;
 		}
-	}
+    }
+    else {
+		if(returnPathIndex >= maze->getReturnPathLength() - 1) {
+			Serial.println("!! Exceeded path limits on return home.");
+			return -1;
+		}
+    }
 
-	if(pathIndex >= maze->getPathLength() - 1) {
-		// we are at the last node..and failed to find the fire, presumably.
-		// we stop at second to last path index because setCourse includes the next node
-		Serial.println("Finished course, no joy.");
-		return -1;
-	}
-
-	nextNode = maze->getPathNode(pathIndex + 1);
+    if(!bGoingHome) {
+    	nextNode = maze->getPathNode(pathIndex + 1);
+    }
+    else {
+    	nextNode = maze->getReturnPathNode(returnPathIndex + 1);
+    }
 	
 	Serial.println("");
-	Serial.print("At path index ");
-	Serial.println(pathIndex);
+	if(!bGoingHome) {
+		Serial.print("At path index ");
+		Serial.println(pathIndex);
+	}
+	else {
+		Serial.print("At return path index ");
+		Serial.println(returnPathIndex);
+	}
 	Serial.print("Current node id: ");
 	Serial.println(currentNode.id);
 	Serial.print("Next node id: ");
@@ -96,57 +176,6 @@ int Pilot::setCourse() {
 	if((currentNode.id == 0) && (nextNode.id == 1)) {
 		hallwayWidth = 34;	// this applies when we are heading for room 3
 	}
-	
-	// is this right? I don't think there is a wall there
-	// hand-tune for entering room 2
-//	if((currentNode.id == 4) && (nextNode.id == 7)) {
-//		robot->resetOdometers();
-//		robot->resetStallWatcher();
-//		robot->markPosition();
-//		robot->updateOdometry();
-//
-//		// ((46.0 + 8.5)/2.0) - 6.25
-//		float nudgeDistance = 21.25;
-//		Serial.print("Nudging along wall ");
-//		Serial.println(nudgeDistance);
-//		while((robot->getDistanceFromMarkedPoint() < nudgeDistance) && (!robot->isStalled())) {
-//			robot->followWall(ROBOT_LEFT);
-//			robot->updateOdometry();
-//		}
-//
-//		// unlikely...
-//		if(robot->isStalled()) {
-//			robot->stop();
-//			// TODO: recovery code is incorrect here
-//			robot->recover();
-//			delay(500);
-//			robot->align(ROBOT_LEFT);
-//			delay(500);
-//
-//			robot->markPosition();
-//			robot->updateOdometry();
-//
-//			while((robot->getDistanceFromMarkedPoint() < nudgeDistance) && (!robot->isStalled())) {
-//				robot->followWall(ROBOT_LEFT);
-//				robot->updateOdometry();
-//			}
-//		}
-//
-//		robot->stop();
-//	}
-	// hand-tune for *after* leaving node 4 to go to 1
-//	if((currentNode.id == 1) && (nextNode.id == 8)) {
-//		// nudgeForward();
-//		float nudgeDistance = ((hallwayWidth + robot->getTrackWidth())/2.0);
-//		robot->move(nudgeDistance, 0);
-//		robot->stop();
-//	}
-	
-	// hand-tuning for going from node 2 to node 3
-//	if((currentNode.id == 2) && (nextNode.id == 3)) {
-//		robot->align(ROBOT_LEFT);
-//		robot->stop();
-//	}
 	
 	// turn the robot the right direction and update heading
 	changeHeading(heading, newHeading);
@@ -218,6 +247,11 @@ int Pilot::setCourse() {
 	if(nextNode.isRoom) {
 		Serial.println("Next node is a room.");
 		nodeCheck = PILOT_CHECK_DISTANCE;
+		followMethod = PILOT_FOLLOW_LEFT;
+
+		if(nextNode.id == 7) {
+			followMethod = PILOT_FOLLOW_NONE;
+		}
 
 		if(distanceToNext == 0) {
 			distanceToNext = hallwayWidth + 5;
@@ -252,8 +286,12 @@ int Pilot::setCourse() {
 //		doAlignLeft = true;
 //	}
 	if(currentNode.isRoom) {
-		// we are following right wall out
+		// we are following right wall out, except for room 7
 		followMethod = PILOT_FOLLOW_RIGHT;
+		if(currentNode.id == 7) {
+			followMethod = PILOT_FOLLOW_NONE;
+		}
+
 		doAlignRight = true;
 	}
 
@@ -293,7 +331,7 @@ int Pilot::setCourse() {
 	// if we are using wall checks, switch to forward check when wall lost, if possible
 	// only applies to approach for node 10 right now
 	bSwitchAfterWallCheck = false;
-	if((nextNode.neighbor[heading] == MAZE_WALL) &&
+	if((nextNode.neighbor[heading] == MAZE_WALL) && // (nextNode.id != 8) &&
 			((nodeCheck == PILOT_CHECK_LEFT) || (nodeCheck == PILOT_CHECK_RIGHT))) {
 		Serial.println("Will use front sonar to go forward after wall loss.");
 		bSwitchAfterWallCheck = true;
@@ -313,8 +351,14 @@ int Pilot::setCourse() {
 	// make sure we start at a reasonable speed
 	robot->resetCalculatedMovePWMs();
 	
-	Serial.print("For path index ");
-	Serial.println(pathIndex);
+	if(!bGoingHome) {
+		Serial.print("For path index ");
+		Serial.println(pathIndex);
+	}
+	else {
+		Serial.print("For return path index ");
+		Serial.println(returnPathIndex);
+	}
 	Serial.print("Follow method is ");
 	Serial.println(followMethod);
 	Serial.print("Check method is ");
@@ -324,7 +368,12 @@ int Pilot::setCourse() {
 	// Serial.print("Front stop distance is ");
 	// Serial.println(frontStopDistance);
 	
-	pathIndex++;
+	if(!bGoingHome) {
+		pathIndex++;
+	}
+	else {
+		returnPathIndex++;
+	}
 
 	return 0;
 }
@@ -398,7 +447,7 @@ int Pilot::go() {
 
 	// We must make the distance trigger far enough that we do not simply follow the
 	// wall around the turn!
-	float bufferDistance = 15;
+	float bufferDistance = 17;
 	const float desiredWallDistance = ((hallwayWidth - robot->getTrackWidth()) / 2.0) + 2;
 	
 	robot->updateOdometry();
@@ -406,7 +455,7 @@ int Pilot::go() {
 	
 	// straight distance check first
 	if(nodeCheck == PILOT_CHECK_DISTANCE) {
-		if((distanceTravelled + bufferDistance) > distanceToNext) {
+		if((distanceTravelled + 3.0) > distanceToNext) {
 				Serial.println("PILOT_CHECK_DISTANCE triggered.");
 				robot->stop();
 				delay(DEBUG_DELAY);
@@ -440,7 +489,7 @@ int Pilot::go() {
 					if(wallDistance  < desiredWallDistance + bufferDistance) {
 						robot->stop();													
 						Serial.println("PILOT_CHECK_FORWARD triggered.");
-						delay(500);	// don't remove this!
+						delay(750);	// don't remove this! Can mess up alignment otherwise
 
 						// now we need to confirm that we didn't trigger based on a bad alignment
 						// also, lines us up for the subsequent move
@@ -548,7 +597,6 @@ int Pilot::go() {
 			} // if checking wall still present
 
 //			if(nodeCheck == PILOT_CHECK_RIGHT_APPEARANCE) {
-//				// TODO: implement. if right wall appears, delay slightly and check again to confirm, stop and return 1
 //				// until implemented, this is an error
 //				Serial.println("PILOT_CHECK_RIGHT_APPEARANCE is not implemented yet!!!!!");
 //				return -2;
@@ -589,7 +637,7 @@ void Pilot::nudgeForwardAfterWallLoss(short wallDirection) {
 	delay(500);
 	robot->resetCalculatedMovePWMs();
 
-	float fudgeFactor = 3.0;
+	float fudgeFactor = 0.0;
 
 	float nudgeDistance = robot->getCalculatedWallEnd(wallDirection) + (hallwayWidth / 2.0) + fudgeFactor;
 
@@ -636,6 +684,8 @@ float Pilot::nudgeToAlign(short wallDirection) {
 
 	boolean doLoop = true;
 	float angleTurned = 0;
+	int numRecovers = 0;
+	int numProactiveRecovers = 0;
 
 	while(doLoop) {
 		if(robot->isStalled()) {
@@ -643,12 +693,38 @@ float Pilot::nudgeToAlign(short wallDirection) {
 				robot->resetStallWatcher();
 			}
 			else {
-				robot->recover();
-				robot->stop();
+				if(numRecovers < 5) {
+					numRecovers++;
+					robot->recover();
+					robot->stop();
+				}
+				else {
+					// OK, we have a real problem here
+					Serial.println("Nudge to align, standard recoveries have failed.");
+					robot->resetStallWatcher();
+					int closeSide = robot->getSideClosestToForwardObstacle();
+					robot->backUp(10.0);
+					robot->stop();
+					robot->resetStallWatcher();
+					if(closeSide != ROBOT_NO_VALID_DATA) {
+						if(closeSide == ROBOT_LEFT) {
+							robot->turn(-30.0);
+						}
+						else {
+							robot->turn(30.0);
+						}
+					}
+					robot->resetStallWatcher();
+					numRecovers = 0;
+				}
 
+				robot->resetStallWatcher();
 				// so goal point is re-oriented properly
-				robot->setGoal(50, 0);
+				robot->setGoal(500, 0);
 			}
+		}
+		else {
+			numRecovers = 0;
 		}
 
 		// drive slowly forward
@@ -677,20 +753,28 @@ float Pilot::nudgeToAlign(short wallDirection) {
 				Serial.println("nudgeToAlign has encountered a forward obstacle");
 				delay(500);
 
-				angleTurned += robot->recover();
-				Serial.print(angleTurned);
+				if(numProactiveRecovers < 5) {
+					angleTurned += robot->recover();
+					Serial.print("Recovery turned: ");
+					Serial.println(angleTurned);
 
-				// so goal point is re-oriented properly
-				robot->setGoal(50, 0);
+					// so goal point is re-oriented properly
+					robot->setGoal(500, 0);
 
-				// we may have been on an outside corner..in which case, should
-				// move forward a while before testing alignment again
-				minTravelRequired = robot->getDistanceFromMarkedPoint() +
-						(minAllowedFrontWallDistance * 1.4 * 1.3);
+					// we may have been on an outside corner..in which case, should
+					// move forward a while before testing alignment again
+					minTravelRequired = robot->getDistanceFromMarkedPoint() +
+							(minAllowedFrontWallDistance * 1.4 * 1.3);
 
-				lastPingTime += 100;
-
+					lastPingTime += 100;
+				}
+				else {
+					Serial.println("Nudge to align ignoring forward obstacle warnings.");
+				}
 			} // if forward wall detected
+			else {
+				numProactiveRecovers = 0;
+			}
 		} // if time to check sensors
 	} // while looking for wall
 	
@@ -720,4 +804,25 @@ float Pilot::nudgeToAlign(short wallDirection) {
 	// TODO: if watcher stalled, do some recovery
 
 	return distance;
+}
+
+int Pilot::headHome() {
+	Serial.println("In head home.");
+	short roomId = currentNode.id;
+
+	for(int i = 0; i < maze->getReturnPathLength(); i++) {
+		mapNode node = maze->getReturnPathNode(i);
+		if(node.id == currentNode.id) {
+			returnPathIndex = i;
+			bGoingHome = true;
+			Serial.print("Return path index is ");
+			Serial.println(returnPathIndex);
+			return 0;
+		}
+	}
+
+	// uh-oh, didn't find it
+	Serial.print("!!! Unable to find return path index for node id ");
+	Serial.println(roomId);
+	return -1;
 }

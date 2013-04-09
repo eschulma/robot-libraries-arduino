@@ -4,6 +4,7 @@
 #include "FirefighterRobot.h"
 
 #define PILOT_FIRE_EXTINGUISHED 100
+#define PILOT_RETURNED_HOME 200
 
 enum pilotFollowMethod {
 	PILOT_FOLLOW_LEFT,
@@ -22,6 +23,7 @@ enum pilotNodeCheck {
 class Pilot {
 	private:
 		short pathIndex;
+		short returnPathIndex;
 		mapNode currentNode;
 		mapNode nextNode;
 		
@@ -31,19 +33,25 @@ class Pilot {
 		FirefighterRobot* robot;
 		pilotNodeCheck nodeCheck;
 		pilotFollowMethod followMethod;
-		long lastPingTime;
 		float hallwayWidth;
 		boolean bSwitchAfterWallCheck;
-		
+		boolean bGoingHome;
+
+		long lastPingTime;
+		double roomEntryX;
+		double roomEntryY;
+		double roomEntryHeading;
+
 		void changeHeading(mazeHeading currentHeading, mazeHeading newHeading);		
 		void nudgeForwardAfterWallLoss(short wallDirection);
 		float nudgeToAlign(short wallDirection);
 		boolean fightFire();
 	public:
+		void setStart(short startPathIndex, mazeHeading startHeading);
 		int setCourse();
 		int go();		
-		void setStart(short startPathIndex, mazeHeading startHeading);
-				
+		int headHome();
+
 		Pilot(Maze* inMaze, FirefighterRobot* inRobot, mazeHeading startHeading);
 
 #ifdef FIREFIGHTER_TEST

@@ -62,36 +62,56 @@ void testNudgeToAlign() {
 
 void testSegment() {
 	// can use pilot.setStart to start at arbitrary node; pathIndex, heading
-	pilot.setStart(5, MAZE_SOUTH);
+	pilot.setStart(8, MAZE_NORTH);
 	pilot.setCourse();
 
-//	Serial.print("Hallway width: ");
-//	Serial.println(pilot.hallwayWidth);
-
 	boolean bContinue = true;
-	  while(bContinue) {
-	    int returnCode = pilot.go();
-	    if(returnCode > 0) {
-	      returnCode = pilot.setCourse();
-	      if(returnCode == PILOT_FIRE_EXTINGUISHED) {
-	        robot->stop();
-	        Serial.println("Success!!!");
-	        bContinue = false;
-	      }
-	      else if(returnCode < 0) {
-	        robot->stop();
-	        Serial.print("pilot.setCourse returned code ");
-	        Serial.println(returnCode);
-	        bContinue = false;
-	      }
-	    }
-	    else if(returnCode < 0) {
-	      robot->stop();
-	      Serial.print("pilot.go returned code ");
-	      Serial.println(returnCode);
-	      bContinue = false;
-	    }
+  while(bContinue) {
+	int returnCode = pilot.go();
+	if(returnCode > 0) {
+	  returnCode = pilot.setCourse();
+	  if(returnCode == PILOT_FIRE_EXTINGUISHED) {
+		robot->stop();
+		Serial.println("Success!!!");
+
+		// put out the candle, now go back to start
+		returnCode = pilot.headHome();
+		if(returnCode < 0) {
+			robot->stop();
+			Serial.println("Unable to head home, return code was ");
+			Serial.print(returnCode);
+			bContinue = false;
+		}
+		else {
+			// set course for heading home before go is called again
+			returnCode = pilot.setCourse();
+			if(returnCode < 0) {
+				robot->stop();
+				Serial.print("pilot.setCourse returned code ");
+				Serial.println(returnCode);
+				bContinue = false;
+			}
+		}
 	  }
+	  else if(returnCode == PILOT_RETURNED_HOME) {
+		robot->stop();
+		Serial.println("Back home!!!");
+		bContinue = false;
+	  }
+	  else if(returnCode < 0) {
+		robot->stop();
+		Serial.print("pilot.setCourse returned code ");
+		Serial.println(returnCode);
+		bContinue = false;
+	  }
+	}
+	else if(returnCode < 0) {
+	  robot->stop();
+	  Serial.print("pilot.go returned code ");
+	  Serial.println(returnCode);
+	  bContinue = false;
+	}
+  }
 	robot->stop();
 }
 

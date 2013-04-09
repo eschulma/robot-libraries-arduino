@@ -114,9 +114,12 @@ boolean FirefighterRobot::goToGoal(double goalX, double goalY) {
 	float slowDownFactor = 0.5;
 	float slowDownDistance = 1;
 
+	stallWatcher->reset();
+
 	// Turn towards goal first, otherwise for short distance and
 	// big turn required, we may have issues.
 	if(fabs(odom.getHeadingError()) > 5 * DEG_TO_RAD) {
+		Serial.println("Turning towards goal.");
 		turn(-odom.getHeadingError());
 		stop();
 		delay(500);
@@ -258,10 +261,10 @@ boolean FirefighterRobot::turn(double headingChange) {
 	// PID values
 	double kP_accel = 2;
 
-
 	odom.setTargetHeading(goalHeading);
 	resetOdometers();
 	odom.update();
+	stallWatcher->reset();
 	delay(10);
 
 	float dr = basePWM;
@@ -336,6 +339,9 @@ boolean FirefighterRobot::turn(double headingChange) {
 			if(fabs(dl) < 250) {
 				// Serial.println("Still trying...");
 				stallWatcher->reset();
+			}
+			else {
+				Serial.println("Turn stalled.");
 			}
 		}
 
@@ -560,11 +566,11 @@ float FirefighterRobot::getSonarDistance(sonarLocation loc) {
 float FirefighterRobot::getMisalignment(short direction) {
 	boolean readingFailed = false;
 
-	sonarLocation front = SONAR_LEFT_F;
-	sonarLocation rear = SONAR_LEFT_R;
+	sonarLocation one = SONAR_LEFT_F;
+	sonarLocation two = SONAR_LEFT_R;
 	if(direction == ROBOT_RIGHT) {
-		front = SONAR_RIGHT_R;
-		rear = SONAR_RIGHT_F;
+		one = SONAR_RIGHT_R;
+		two = SONAR_RIGHT_F;
 	}
 
 	float distance1 = 0;
@@ -574,9 +580,9 @@ float FirefighterRobot::getMisalignment(short direction) {
 	short numRetries = 0;
 	do {
 		delay(100);
-		distance1 = sonar[front]->ping_cm();
+		distance1 = sonar[one]->ping_cm();
 		numRetries++;
-	} while((distance1 < 0.01) && (numRetries < 5));
+	} while((distance1 < 3.5) && (numRetries < 5));
 
 	if(distance1 < 0.01) {
 		readingFailed = true;
@@ -589,9 +595,9 @@ float FirefighterRobot::getMisalignment(short direction) {
 		numRetries = 0;
 		do {
 			delay(100);
-			distance2 = sonar[rear]->ping_cm();
+			distance2 = sonar[two]->ping_cm();
 			numRetries++;
-		} while((distance2 < 0.01) && (numRetries < 5));
+		} while((distance2 < 3.5) && (numRetries < 5));
 		if(distance2 < 0.01) {
 			readingFailed = true;
 		}
@@ -655,7 +661,7 @@ float FirefighterRobot::getMisalignmentAngle(short direction) {
 //  Serial.println(y);
 
 	// got back garbage from diff function
- 	if(fabs(y) > 100) {
+ 	if(fabs(y) > 50) {
  		Serial.print("getMisalignment returned too high a value: ");
  		Serial.println(y);
  		return ROBOT_NO_VALID_DATA;
@@ -666,22 +672,23 @@ float FirefighterRobot::getMisalignmentAngle(short direction) {
  	}
   
  	/***
- 	 * Now actually...I am fairly certain this should be atan2, not asin. The difficulty
+ 	 * Now actually...I am fairly certain this should be atan, not asin. The difficulty
  	 * is that we end up with a terribly unstable value that way.
  	 *
  	 * Since we are using asin, I need to constrain the output.
  	 * OLD: if fabs(y) was greater than sensorSpacing, return NaN which leads to
  	 * no action being taken.
  	 */
- 	float theta;
- 	if(y > sensorSpacing) {
- 		theta = 30.0 * DEG_TO_RAD;
- 	}
- 	else if(y < -sensorSpacing) {
- 		theta = -30.0 * DEG_TO_RAD;
- 	}
- 	else {
- 		theta = asin(y/sensorSpacing);
+ 	float theta = atan2(y, sensorSpacing);
+ 	double limitAngle = PI/6.0;
+ 	if(fabs(theta) > limitAngle) {
+ 		Serial.println("Constraining misalignment angle.");
+ 		if(y > 0) {
+ 			theta = limitAngle;
+ 		}
+ 		else {
+ 			theta = -limitAngle;
+ 		}
  	}
 
  	// wrap with atan2 for safety
@@ -697,8 +704,8 @@ float FirefighterRobot::getMisalignmentAngle(short direction) {
 //  	Serial.println("Aligning more than 45..");
 //  }
   
- 	Serial.print("Misalignment angle: ");
- 	Serial.println(theta);
+ 	Serial.print("Misalignment angle (degrees): ");
+ 	Serial.println(theta * RAD_TO_DEG);
   
  	return theta;
 }
@@ -878,8 +885,6 @@ void FirefighterRobot::setFanServo(short degrees) {
 	if(degrees < -180) {
 		degrees = (degrees + 360) % 360;
 	}
-
-	fanServoDegrees = degrees;
 	
 	int val = map(degrees, -180, 180, 40, 140);
 	/* Serial.print("Servo PWM value: ");
@@ -1176,11 +1181,11 @@ float FirefighterRobot::recover() {
 	}
 
 	if(closeSide == ROBOT_RIGHT) {
-		turn(15 * DEG_TO_RAD);
+		turn(15.0 * DEG_TO_RAD);
 		angleTurned += 15 * DEG_TO_RAD;
 	}
 	else {
-		turn(-15 * DEG_TO_RAD);
+		turn(-15.0 * DEG_TO_RAD);
 		angleTurned -= 15 * DEG_TO_RAD;
 	}
 	stop();

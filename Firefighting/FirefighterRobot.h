@@ -38,9 +38,6 @@ class FirefighterRobot {
 
 		int desiredWallSensorReading[2];
 		float sideWallLossFactor;
-		float frontWallFoundDistance;
-		float rearWallFoundDistance;
-		short fanServoDegrees;
 		
 		short wallSensorPin[2];
 		short wallRearSensorPin[2];
@@ -138,6 +135,10 @@ class FirefighterRobot {
 		float getFollowWallCalculatedPWM() const { return followWallCalculatedPWM; }
 		short getMaxAllowedPWM() const { return maxAllowedPWM; }
 		float getMoveCalculatedPWM() const { return moveCalculatedPWM; }
+
+		double getX() { return odom.getX(); };
+		double getY() { return odom.getY(); };
+		double getHeading() { return odom.getHeading(); };
 
 		FirefighterRobot();
 

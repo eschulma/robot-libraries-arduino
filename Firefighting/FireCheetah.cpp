@@ -109,15 +109,22 @@ void FireCheetah::setup() {
 	targetFollowVelocity = 20.0;
 	targetAngularVelocity = 0.6;
 		
-	// tested on white walls, 23 cm distance
+	/**
+	 * The fire threshold is highly dependent on the ambient UV in the room, primarily from sunlight.
+	 * In daytime for my family room 300 works well, but at night it needs to be twice as high. In short:
+	 * calibrate on the day of the contest.
+	 *
+	 * Set this high for single room mode, as we know the fire is there!
+	 */
+	fireThresholdReading = 600;
+	fireOutReading = 1000;
+	
+	/**
+	 * IR values. Tested on white walls, 23 cm distance.
+	 * Like other sensor values, calibration is recommended.
+	 */
 	desiredWallSensorReading[ROBOT_LEFT] = 150;
 	desiredWallSensorReading[ROBOT_RIGHT] = 180;
 
-	sideWallLossFactor = 0.7;	// higher number means we lose it at a nearer distance
-	// set this high for single room, as we know the fire is there!
-	fireThresholdReading = 300; // but this is a small room, and reflections off walls a problem.
-	fireOutReading = 1000;
-	
-	frontWallFoundDistance = 35;	// this relates to hallway width and stop distance
-	rearWallFoundDistance = 35;		// this relates to hallway width and stop distance
+	sideWallLossFactor = 0.7;	// higher number means we declare loss of IR contact at a nearer distance
 }

@@ -54,3 +54,21 @@ mapNode Maze::getPathNode(short pathIndex) {
 
 	return nodeList[nodeIndex];
 }
+
+mapNode Maze::getReturnPathNode(short returnPathIndex) {
+	if(returnPathIndex > getReturnPathLength()) {
+		Serial.print("!!!!!!!!!! Error!!! Return path index outside bounds: ");
+		Serial.println(returnPathIndex);
+		return nodeList[0];
+	}
+
+	short nodeIndex = returnPathList[returnPathIndex];
+	if(nodeIndex > getNumNodes()) {
+		Serial.print("!!!!!!!!!! Error!!! Node index for return path list outside bounds, index was: ");
+		Serial.println(returnPathIndex);
+		return nodeList[0];
+	}
+
+	return nodeList[nodeIndex];
+}
+
