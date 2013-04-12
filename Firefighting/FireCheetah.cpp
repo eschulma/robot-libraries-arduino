@@ -96,9 +96,9 @@ void FireCheetah::setup() {
 
 	maxAllowedPWM = 253; // must be LESS than 254
 
-	// 9V values
-	followWallPWM = 65; // 90;
-	movePWM = 65; // 90;
+	// 9V *starting* values -- the drive functions will increase or decrease them
+	followWallPWM = 50;
+	movePWM = 50;
 	turnPWM = 30;
 
 	// these evolve over time
@@ -116,7 +116,7 @@ void FireCheetah::setup() {
 	 *
 	 * Set this high for single room mode, as we know the fire is there!
 	 */
-	fireThresholdReading = 600;
+	fireThresholdReading = 300;
 	fireOutReading = 1000;
 	
 	/**
@@ -127,4 +127,10 @@ void FireCheetah::setup() {
 	desiredWallSensorReading[ROBOT_RIGHT] = 180;
 
 	sideWallLossFactor = 0.7;	// higher number means we declare loss of IR contact at a nearer distance
+
+	// ping the sonar sensors, because it seems the first time they are activated, values are wrong
+	getSideWallDistance(ROBOT_LEFT);
+	getSideWallDistance(ROBOT_LEFT);
+	delay(500);
+
 }
