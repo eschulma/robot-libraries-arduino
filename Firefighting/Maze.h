@@ -3,7 +3,7 @@
 #include <Arduino.h>
 
 #define MAZE_NUM_NODES 12
-#define MAZE_PATH_LENGTH 18
+#define MAZE_PATH_LENGTH 16
 #define MAZE_NUM_ROOMS 4
 
 typedef struct {

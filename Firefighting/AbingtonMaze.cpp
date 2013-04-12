@@ -20,8 +20,7 @@ void AbingtonMaze::setup() {
 	nodeList[1].distToNeighbor[MAZE_WEST] = 72;
 	nodeList[1].neighbor[MAZE_SOUTH] = 10; // 8; we can't go from 1 to 8, no good checks
 	nodeList[1].distToNeighbor[MAZE_SOUTH] = 120;
-	nodeList[1].neighbor[MAZE_EAST] = 4;
-	nodeList[1].distToNeighbor[MAZE_EAST] = nodeList[4].distToNeighbor[MAZE_WEST];
+	nodeList[1].neighbor[MAZE_EAST] = 6; // 4; we can't go from 1 to 4, no good checks
 	
 	nodeList[2].neighbor[MAZE_EAST] = 1;
 	nodeList[2].distToNeighbor[MAZE_EAST] = nodeList[1].distToNeighbor[MAZE_WEST];
@@ -79,11 +78,14 @@ void AbingtonMaze::setup() {
 	pathList[10] = 9;
 	pathList[11] = 8;
 	pathList[12] = 1;
-	pathList[13] = 0;
-	pathList[14] = 5;
-	pathList[15] = 6;
-	pathList[16] = 4;
-	pathList[17] = 7;
+//	pathList[13] = 0;
+//	pathList[14] = 5;
+//	pathList[15] = 6;
+//	pathList[16] = 4;
+//	pathList[17] = 7;
+	pathList[13] = 6;
+	pathList[14] = 4;
+	pathList[15] = 7;
 
 	// pathList = { 0, 1, 2, 3, 2, 1, 10, 11, 10, 8, 9, 8, 1, 0, 5, 6, 4, 7 };
 	
