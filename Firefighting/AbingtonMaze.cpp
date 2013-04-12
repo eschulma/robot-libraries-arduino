@@ -21,6 +21,7 @@ void AbingtonMaze::setup() {
 	nodeList[1].neighbor[MAZE_SOUTH] = 10; // 8; we can't go from 1 to 8, no good checks
 	nodeList[1].distToNeighbor[MAZE_SOUTH] = 120;
 	nodeList[1].neighbor[MAZE_EAST] = 4;
+	nodeList[1].distToNeighbor[MAZE_EAST] = nodeList[4].distToNeighbor[MAZE_WEST];
 	
 	nodeList[2].neighbor[MAZE_EAST] = 1;
 	nodeList[2].distToNeighbor[MAZE_EAST] = nodeList[1].distToNeighbor[MAZE_WEST];
@@ -32,6 +33,7 @@ void AbingtonMaze::setup() {
 	nodeList[3].distToNeighbor[MAZE_SOUTH] = nodeList[2].distToNeighbor[MAZE_NORTH];
 	
 	nodeList[4].neighbor[MAZE_WEST] = 1;
+	nodeList[4].distToNeighbor[MAZE_WEST] = 46;	// hallway is wider here, but going short is OK
 	nodeList[4].neighbor[MAZE_NORTH] = 7;
 	nodeList[4].neighbor[MAZE_EAST] = 6;
 	nodeList[4].distToNeighbor[MAZE_NORTH] = 46;
