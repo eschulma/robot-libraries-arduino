@@ -1,6 +1,8 @@
 #include <Pilot.h>
 
 #define DEBUG_DELAY 0
+#define PRE_ALIGN_DELAY 100
+#define TURN_DELAY 100
 
 Pilot::Pilot(Maze* inMaze, FirefighterRobot* inRobot, mazeHeading startHeading){
 	maze = inMaze;
@@ -63,11 +65,10 @@ int Pilot::setCourse() {
 		return PILOT_RETURNED_HOME;
 	}
 
-	// put back when testing is done!!
+	// we have arrived in a room -- time to look for the candle, continue on, or go home
     if(currentNode.isRoom) {
     	if(!bGoingHome) {
-			boolean success = fightFire();
-			if(success) {
+			if(fightFire()) {
 				return PILOT_FIRE_EXTINGUISHED;
 			}
     	}
@@ -79,22 +80,29 @@ int Pilot::setCourse() {
     		if((wallDistance != ROBOT_NO_VALID_DATA) && (wallDistance < 10.0)) {
     			robot->turn(15.0 * DEG_TO_RAD);
     			robot->stop();
+    			delay(TURN_DELAY);
     			robot->backUp(10.0);
     			robot->stop();
+        		// for backing up, we should allow extra time before making motors go forward again
+        		delay(2 * TURN_DELAY);
     		}
     		else {
         		wallDistance = robot->getSideWallDistance(ROBOT_RIGHT);
         		if((wallDistance != ROBOT_NO_VALID_DATA) && (wallDistance < 10.0)) {
         			robot->turn(-15.0 * DEG_TO_RAD);
         			robot->stop();
+        			delay(TURN_DELAY);
         			robot->backUp(10.0);
         			robot->stop();
+            		// for backing up, we should allow extra time before making motors go forward again
+            		delay(2 * TURN_DELAY);
         		}
     		}
 
     		// move to the entry spot
     		robot->goToGoal(roomEntryX, roomEntryY);
     		robot->stop();
+       		delay(TURN_DELAY);
 
     		// turn so we are facing 180 from where we entered
     		double desiredHeading = roomEntryHeading + PI;
@@ -102,6 +110,7 @@ int Pilot::setCourse() {
     		double currentHeading = robot->getHeading();
     		robot->turn(desiredHeading - currentHeading);
     		robot->stop();
+    		delay(TURN_DELAY);
 
     		// update heading appropriately
     		heading = (mazeHeading)((heading + 2) % 4);
@@ -170,11 +179,6 @@ int Pilot::setCourse() {
 	if(hallwayWidth == 0) {
 		Serial.println("Hallway width was zero!!! Corrupted memory, exiting.");
 		return -2;
-	}
-
-	// TODO: rooms 3 and 4 may have a hall of width 56 cm between them
-	if((currentNode.id == 0) && (nextNode.id == 1)) {
-		hallwayWidth = 34;	// this applies when we are heading for room 3
 	}
 	
 	// turn the robot the right direction and update heading
@@ -282,9 +286,6 @@ int Pilot::setCourse() {
 		followMethod = PILOT_FOLLOW_RIGHT;
 		doAlignRight = true;
 	}
-//	if((currentNode.id == 5) && (nextNode.id == 6)) {
-//		doAlignLeft = true;
-//	}
 	if(currentNode.isRoom) {
 		// we are following right wall out, except for room 7
 		followMethod = PILOT_FOLLOW_RIGHT;
@@ -302,7 +303,7 @@ int Pilot::setCourse() {
 			wallSide = ROBOT_LEFT;
 		}
 
-		Serial.print("Aligning side ");
+		Serial.print("Preparing to align side ");
 		Serial.println(wallSide);
 
 		int heading;
@@ -318,14 +319,21 @@ int Pilot::setCourse() {
 						
 			float dist = nudgeToAlign(wallSide);
 			distanceToNext -= dist;
-			if(dist != 0) {
-				delay(500); // need this for wall alignment.
-			}
 		}
 		
 		// And now. Try to align with wall.
-		robot->align(wallSide);
-		delay(500);	// delays after turns are important
+		delay(PRE_ALIGN_DELAY);
+		if(robot->align(wallSide)) {
+			delay(TURN_DELAY);	// delays after turns are important
+		}
+	}
+
+	// for the island room exit, only follow wall if it is visible
+	if((currentNode.id == 4) && (nextNode.id == 1)) {
+		if(robot->isSideWallLost(ROBOT_LEFT)) {
+			nodeCheck = PILOT_CHECK_DISTANCE;
+			followMethod = PILOT_FOLLOW_NONE;
+		}
 	}
 
 	// if we are using wall checks, switch to forward check when wall lost, if possible
@@ -337,7 +345,7 @@ int Pilot::setCourse() {
 		bSwitchAfterWallCheck = true;
 	}
 
-
+	// put this at the very end!
 	if((followMethod == PILOT_FOLLOW_NONE) || (bSwitchAfterWallCheck)) {
 		// set a goal so we drive forward
 		robot->setGoal(1000, 0);
@@ -388,7 +396,7 @@ void Pilot::changeHeading(mazeHeading currentHeading, mazeHeading newHeading) {
 		Serial.println(newHeading);
 		
 		robot->stop();
-		delay(500);
+		delay(TURN_DELAY);
 
 		double my90 = 90 * DEG_TO_RAD;
 	
@@ -406,7 +414,7 @@ void Pilot::changeHeading(mazeHeading currentHeading, mazeHeading newHeading) {
 		}
 		// let motors settle
 		robot->stop();
-		delay(500); // important! (was 1500)
+		delay(TURN_DELAY); // important! (was 1500)
 	}
 	else {
 		Serial.println("No heading change.");
@@ -489,7 +497,7 @@ int Pilot::go() {
 					if(wallDistance  < desiredWallDistance + bufferDistance) {
 						robot->stop();													
 						Serial.println("PILOT_CHECK_FORWARD triggered.");
-						delay(750);	// don't remove this! Can mess up alignment otherwise
+						delay(PRE_ALIGN_DELAY * 1.5);	// don't remove this! Can mess up alignment otherwise
 
 						// now we need to confirm that we didn't trigger based on a bad alignment
 						// also, lines us up for the subsequent move
@@ -510,6 +518,9 @@ int Pilot::go() {
 							if(wallDistance > desiredWallDistance + bufferDistance) {
 								Serial.println("Alignment gives cancellation of front wall check.");
 								return 0;
+							}
+							else {
+								delay(TURN_DELAY);
 							}
 						}
 							
@@ -555,7 +566,7 @@ int Pilot::go() {
 
 						// see if we are way off in angle, and if so, try to align
 						robot->stop();
-						delay(500);
+						delay(PRE_ALIGN_DELAY);
 						robot->resetStallWatcher();
 
 						boolean bTurnDone = false;
@@ -634,10 +645,12 @@ int Pilot::go() {
  */
 void Pilot::nudgeForwardAfterWallLoss(short wallDirection) {
 	robot->stop();
-	delay(500);
-	robot->resetCalculatedMovePWMs();
+	// robot->resetCalculatedMovePWMs();
 
 	float fudgeFactor = 0.0;
+	if((currentNode.id == 0) && (nextNode.id == 1)) {
+		fudgeFactor = 2.0;
+	}
 
 	float nudgeDistance = robot->getCalculatedWallEnd(wallDirection) + (hallwayWidth / 2.0) + fudgeFactor;
 
@@ -650,7 +663,7 @@ void Pilot::nudgeForwardAfterWallLoss(short wallDirection) {
 	}
 
 	// did we make it past the wall?
-	delay(500);
+	delay(PRE_ALIGN_DELAY);
 	if(robot->isSideWallPresent(wallDirection)) {
 		Serial.println("Still seeing wall, mudging extra.");
 		robot->move(10, 0);
@@ -659,6 +672,13 @@ void Pilot::nudgeForwardAfterWallLoss(short wallDirection) {
 	
 	Serial.print("Nudged forward ");
 	Serial.println(nudgeDistance);
+
+	// special for island room
+	if((nextNode.id == 4) && (heading == MAZE_WEST)) {
+		Serial.println("Aligning for island room (7).");
+		delay(PRE_ALIGN_DELAY);
+		robot->align(ROBOT_LEFT);
+	}
 }
 
 /**
