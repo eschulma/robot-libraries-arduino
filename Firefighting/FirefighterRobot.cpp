@@ -26,6 +26,9 @@ void FirefighterRobot::stop() {
 	drive(0,0);
 	motor[MOTOR_LEFT]->stop();
 	motor[MOTOR_RIGHT]->stop();
+
+	// new -- to avoid lurches
+	resetCalculatedMovePWMs();
 }
 
 /**
@@ -574,31 +577,55 @@ float FirefighterRobot::getMisalignment(short direction) {
 	}
 
 	float distance1 = 0;
+	float lowerLimit = 3.5;	// below this, sensor value is likely bad
+	long delayTime = 100;
 	
 	// Filter out bad values. NewPing automatically returns 0 for distances past max distance set in
 	// constructor
 	short numRetries = 0;
 	do {
-		delay(100);
+		delay(delayTime);
 		distance1 = sonar[one]->ping_cm();
-		numRetries++;
-	} while((distance1 < 3.5) && (numRetries < 5));
 
-	if(distance1 < 0.01) {
+		// double-check values..yes, we need to do this
+		if(distance1 >= lowerLimit) {
+			delay(delayTime);
+			float distanceConfirm = sonar[one]->ping_cm();
+			if(fabs(distance1 - distanceConfirm) > 2.5) {
+				// couldn't duplicate, so ignore it
+				distance1 = 0.0;
+			}
+		}
+
+		numRetries++;
+	} while((distance1 < lowerLimit) && (numRetries < 5));
+
+	if(distance1 < lowerLimit) {
 		readingFailed = true;
 	}
 	
 	float distance2 = 0;
 	if(!readingFailed) {
-		delay(100);
+		delay(delayTime);
 
 		numRetries = 0;
 		do {
 			delay(100);
 			distance2 = sonar[two]->ping_cm();
 			numRetries++;
-		} while((distance2 < 3.5) && (numRetries < 5));
-		if(distance2 < 0.01) {
+
+			// double-check values..yes, we need to do this
+			if(distance2 >= lowerLimit) {
+				delay(delayTime);
+				float distanceConfirm = sonar[two]->ping_cm();
+				if(fabs(distance2 - distanceConfirm) > 2.5) {
+					// couldn't duplicate, so ignore it
+					distance2 = 0.0;
+				}
+			}
+		} while((distance2 < lowerLimit) && (numRetries < 5));
+
+		if(distance2 < lowerLimit) {
 			readingFailed = true;
 		}
 	}
@@ -660,25 +687,23 @@ float FirefighterRobot::getMisalignmentAngle(short direction) {
 //  Serial.print("Raw diff: ");
 //  Serial.println(y);
 
-	// got back garbage from diff function
- 	if(fabs(y) > 50) {
- 		Serial.print("getMisalignment returned too high a value: ");
- 		Serial.println(y);
- 		return ROBOT_NO_VALID_DATA;
- 	}
-
  	if(sensorSpacing == 0) {
  		Serial.println("Sensor spacing was zero -- corrupted memory!!!!");
  	}
+
   
  	/***
- 	 * Now actually...I am fairly certain this should be atan, not asin. The difficulty
- 	 * is that we end up with a terribly unstable value that way.
- 	 *
- 	 * Since we are using asin, I need to constrain the output.
  	 * OLD: if fabs(y) was greater than sensorSpacing, return NaN which leads to
  	 * no action being taken.
  	 */
+
+ 	// got too great an angle from diff function
+	if(fabs(y) > sensorSpacing) {
+		Serial.print("diff function returned a value which would give over 45 degrees: ");
+		Serial.println(y);
+		return ROBOT_NO_VALID_DATA;
+	}
+
  	float theta = atan2(y, sensorSpacing);
  	double limitAngle = PI/6.0;
  	if(fabs(theta) > limitAngle) {
@@ -765,17 +790,31 @@ float FirefighterRobot::getSideWallDistance(short direction) {
 		mySonar[1] = SONAR_RIGHT_R;
 	}
 
+	float lowerLimit = 3.5;	// below this, sensor value is likely bad
+	long delayTime = 100;
+
 	for(short i = 0; i < 2; i++) {
 		// Filter out bad values. NewPing automatically returns 0 for distances past max distance set in
 		// constructor
 		short numRetries = 0;
 		do {
-			delay(100);
+			delay(delayTime);
 			thisDistance[i] = sonar[mySonar[i]]->ping_cm();
 			numRetries++;
-		} while((thisDistance[i] < 0.01) && (numRetries < 5));
 
-		if(thisDistance[i] > 0.01) {
+			// double-check values..yes, we need to do this
+			if(thisDistance[i] >= lowerLimit) {
+				delay(delayTime);
+				float distanceConfirm = sonar[mySonar[i]]->ping_cm();
+				if(fabs(thisDistance[i] - distanceConfirm) > 2.5) {
+					// couldn't duplicate, so ignore it
+					thisDistance[i] = 0.0;
+				}
+			}
+
+		} while((thisDistance[i] < lowerLimit) && (numRetries < 5));
+
+		if(thisDistance[i] > lowerLimit) {
 			distance += thisDistance[i];
 			numGoodValues++;
 		}
@@ -1148,6 +1187,9 @@ void FirefighterRobot::fightFire(int initDegrees) {
  		turnFanOn(false);
  		setFanServo(0);
  	} // if fire found
+ 	else {
+ 		Serial.println("No more fire!");
+ 	}
 }
 
 void FirefighterRobot::resetCalculatedMovePWMs() {
