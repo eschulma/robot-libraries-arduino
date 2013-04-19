@@ -116,5 +116,183 @@ void FireCheetah::setup() {
 	getSideWallDistance(ROBOT_LEFT);
 	getSideWallDistance(ROBOT_LEFT);
 	delay(500);
+}
 
+/**
+ *	Robot should be facing the fire when this is called.
+ *
+ *	Sunlight can mess with the fire sensor; if there is a sunny
+ *	window in the room, it can may put out a stronger signal than the
+ *	candle!
+ *
+ *	The rules require that we be within 12 inches (30.48 cm) of the candle
+ *	before extinguishing it.
+ */
+void FireCheetah::fightFire(int initDegrees) {
+	resetStallWatcher();
+
+	Serial.print("degrees to turn: ");
+	Serial.println(initDegrees);
+
+	/**
+	 * There is a difference between candles right in front of us and those
+	 * far off to the right. For the former, we have to worry about hitting the
+	 * left wall (theta too high) and for the latter we have to worry about hitting
+	 * the right wall once we get there (theta too low).
+	 */
+	int firstDegreeOffset = 0;
+	int degreeOffset = 10; // good for ones to the right
+	if(fabs(initDegrees) < 15) {
+		degreeOffset = 0;
+	}
+
+	// face the right direction
+	setFanServo(0);
+	turn((double)(initDegrees + firstDegreeOffset) * DEG_TO_RAD);
+	stop();
+	delay(500);
+
+	resetStallWatcher();
+
+	// drive to candle, re-centering every 25 cm
+	while((getFrontWallDistance() > 25) && (!isStalled())) {
+		resetStallWatcher();
+		resetOdometers();
+
+		odom.markPosition();
+		setGoal(25, 0);
+
+		while((!isStalled()) && (getFrontWallDistance() > 20) && (odom.getDistanceFromMarkedPoint() < 25)) {
+			driveTowardGoal();
+			odom.update();
+			delay(50);
+ 	 	}
+ 	 	stop();
+
+ 	 	if(isStalled()) {
+ 	 		// minimal recovery
+ 	 		resetStallWatcher();
+ 	 		backUp(2.0);
+ 	 		resetStallWatcher();
+ 	 	}
+
+ 	 	// we've gone as far as we want to using straight travel
+ 	 	// we can stop slightly further out, though, if needed
+ 	 	if(getFrontWallDistance() > 20) {
+	 	 	int degreesOff = panServoForFire(45, -45);
+	 	 	if(degreesOff == ROBOT_NO_FIRE_FOUND) {
+	 	 		degreesOff = panServoForFire(130, -130);
+	 	 	}
+	 	 	if(degreesOff != ROBOT_NO_FIRE_FOUND) {
+ 		 		turn((double)(degreesOff + degreeOffset) * DEG_TO_RAD);
+ 		 		stop();
+ 		 		delay(250);
+	 		}
+	 		else {
+	 			Serial.println("Lost our fire!");
+	 		}
+	 	}
+ 	}
+
+ 	if(isStalled()) {
+		// minimal recovery
+		resetStallWatcher();
+		backUp(2.0);
+		resetStallWatcher();
+ 	}
+
+ 	stop();
+
+ 	// center servo on fire
+ 	int degrees = panServoForFire(45, -45);
+ 	if(degrees == ROBOT_NO_FIRE_FOUND) {
+ 		degrees = panServoForFire(130, -130);
+ 	}
+ 	if(degrees != ROBOT_NO_FIRE_FOUND) {
+ 		setFanServo(degrees);
+ 	}
+ 	else {
+ 		setFanServo(0);
+ 		// we didn't find the fire???
+ 		Serial.println("Lost the fire?!?!");
+ 	}
+
+ 	float thisFireReadingThreshold = getFireReading() + 300.0;
+ 	thisFireReadingThreshold = max(thisFireReadingThreshold, fireOutReading);
+
+ 	// just a straight blast first
+ 	turnFanOn(true);
+
+ 	// fan for 5 seconds no matter what
+ 	delay(5000);
+
+ 	// fan for another 10 seconds, or until the fire is out
+ 	float reading;
+ 	for(int i = 0; i < 100; i++) {
+ 		delay(100);
+ 		reading = getFireReading();
+ 		if(reading >  thisFireReadingThreshold) {
+ 			delay(1000);
+ 			// double check
+ 			reading = getFireReading();
+ 			if(reading > thisFireReadingThreshold) {
+ 				Serial.print("Fire is out!  ");
+ 				Serial.println(reading);
+ 				// give it another few s to make sure the fire is really out!
+ 				delay(3000);
+ 				break;
+ 			}
+ 			else {
+ 				// we delayed 1000 for nothing
+ 				i += 6;
+ 			}
+ 		}
+ 	}
+ 	Serial.print("final reading: ");
+ 	Serial.println(reading);
+ 	turnFanOn(false);
+
+ 	// still got a fire?
+ 	if(isFire()) {
+ 		delay(10);	// don't bother waiting much
+ 	}
+ 	else {
+ 		delay(5000);
+ 	}
+ 	degrees = panServoForFire();
+ 	if(degrees != ROBOT_NO_FIRE_FOUND) {
+ 		turn((double)(degrees + degreeOffset) * DEG_TO_RAD);
+ 		stop();
+ 		delay(250);
+
+ 		turnFanOn(true);
+
+ 		// straight blast initially
+ 		if(degrees != 0) {
+ 			delay(5000);
+ 		}
+
+ 		// sweep fan while blowing
+ 		degrees = 45;
+ 		setFanServo(degrees);
+ 		delay(500);
+ 		for(int i = 0; i < 5; i++) {
+ 			while(degrees > -65) {
+ 				delay(60);
+ 				degrees -= 5;
+ 				setFanServo(degrees);
+ 			}
+ 			while(degrees < 65) {
+ 				delay(60);
+ 				degrees += 5;
+ 				setFanServo(degrees);
+ 			}
+ 		}
+
+ 		turnFanOn(false);
+ 		setFanServo(0);
+ 	} // if fire found
+ 	else {
+ 		Serial.println("No more fire!");
+ 	}
 }

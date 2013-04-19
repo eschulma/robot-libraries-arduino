@@ -15,7 +15,6 @@
 #define ROBOT_FRONT 2
 #define ROBOT_REAR 3
 
-#define ROBOT_NO_FIRE_FOUND -1000
 #define ROBOT_NO_VALID_DATA -1001
 #define NO_SONAR_FRONT_WALL_SEEN 1000
 
@@ -66,20 +65,12 @@ class DifferentialDriveRobot {
 
 		// sonar and fire
 		NewPing *sonar[5];
-		Servo fanServo;
-		short fireSensorPin;
-		short fanControlPin;
-		short fireThresholdReading;
-		short fireOutReading;
 
 		// sonar functions
 		float getSideWallDistanceReading(short direction) { return analogRead(wallSensorPin[direction]); };
 		float getSonarDistance(sonarLocation index);		
 		float getMisalignment(short direction);
-		
-		int panServoForFire(int startDegree, int endDegree);
-		float getFireReading();
-		
+
 		// children must override these
 		virtual void setup() = 0;		
 	public:
@@ -91,7 +82,6 @@ class DifferentialDriveRobot {
 		void setGoal(double x, double y, boolean inRobotFrame = true);
 		boolean goToGoal(double goalX, double goalY, boolean stopAfterManeuver=true);
 		boolean turn(double deltaHeading, boolean stopAfterManeuver=true);
-		boolean align(short direction);
 		void backUp(float distance, boolean stopAfterManeuver=true);	// go this distance in a straight line, forward or back only DEPRECATED
 		float recover();
 		short getMaxAllowedPWM() const { return maxAllowedPWM; }
@@ -118,16 +108,9 @@ class DifferentialDriveRobot {
 		void followWall(short direction, float velocityFactor = 1.0) { 	followWall(direction, velocityFactor, desiredWallSensorReading[direction]); };
 		float getFollowWallSpeed() { return followWallPWM; };
 		float getMoveSpeed() { return movePWM; };
-		float getCalculatedWallEnd(short direction);
+		float getCalculatedWallEnd(short direction);	// note: this uses sonar
 		int getSideClosestToForwardObstacle();
 		float getFollowWallCalculatedPWM() const { return followWallCalculatedPWM; }
-
-		// fan and fire sensor
-		void setFanServo(short degrees);	// 0 is pointing forward
-		void turnFanOn(boolean on);
-		int panServoForFire();
-		void fightFire(int initDegrees);
-		boolean isFire();
 
 		// sonar functions
 		boolean isSideWallLost(short direction);
@@ -137,6 +120,7 @@ class DifferentialDriveRobot {
 		boolean isAlignmentPossible(short direction, float maxDistance);
 		float getMisalignmentAngle(short direction);
 		boolean isWayForwardBlocked();
+		boolean align(short direction);
 
 		DifferentialDriveRobot();
 

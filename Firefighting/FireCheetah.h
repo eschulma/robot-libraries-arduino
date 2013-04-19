@@ -2,6 +2,7 @@
 #define FireCheetah_h
 #include <Arduino.h>
 #include <DifferentialDriveRobot.h>
+#include <FirefightingRobot.h>
 #include <math.h>
 
 // Arduino motor shield: 3, 8, 9, 11, 13, A0, A1
@@ -34,11 +35,12 @@
 #define ENCODER_RIGHT_A_PIN 18
 #define ENCODER_RIGHT_B_PIN 19
 
-class FireCheetah : public DifferentialDriveRobot {
+class FireCheetah : public DifferentialDriveRobot, public FirefightingRobot {
 	public:
 		FireCheetah();
 		void setup();
-		
+		void fightFire(int initDegrees);
+
 #ifdef FIREFIGHTER_TEST
 		friend class RobotTester;	// for testing
 #endif
