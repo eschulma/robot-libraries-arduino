@@ -62,8 +62,8 @@ void testNudgeToAlign() {
 
 void testSegment() {
   // can use pilot.setStart to start at arbitrary node; pathIndex, heading
-  // do not start in a room with a candle, as extra call here to setCourse may cause problems
-  pilot.setStart(16, MAZE_WEST);
+  // do not start in a room with a candle, as extra call here to setCourse will cause problems
+  pilot.setStart(13, MAZE_WEST);
   pilot.setCourse();
 
   boolean bContinue = true;
@@ -468,11 +468,14 @@ int testPanServoForFire() {
 		Serial.print("Fire reading: ");
 		Serial.println(robot->getFireReading());
 	}	
+	else {
+		Serial.println("No fire found!");
+	}
 	
 	short fireDegrees = degrees;
 	
 	// scan to find minimum
-	if(fireFound) {
+	// if(fireFound) {
 		delay(500);
 		float reading = robot->getFireReading();
 		float minimumReading = reading;
@@ -499,7 +502,7 @@ int testPanServoForFire() {
 			}
 			
 		} while(degrees > -180);
-	}
+	// }
 	
 	if(fireFound) {
 		Serial.print("Fire found at ");

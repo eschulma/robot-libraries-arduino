@@ -116,15 +116,15 @@ void FireCheetah::setup() {
 	 *
 	 * Set this high for single room mode, as we know the fire is there!
 	 */
-	fireThresholdReading = 300;
+	fireThresholdReading = 600;
 	fireOutReading = 1000;
 	
 	/**
 	 * IR values. Tested on white walls, 23 cm distance.
 	 * Like other sensor values, calibration is recommended.
 	 */
-	desiredWallSensorReading[ROBOT_LEFT] = 150;
-	desiredWallSensorReading[ROBOT_RIGHT] = 180;
+	desiredWallSensorReading[ROBOT_LEFT] = 135; // 150;
+	desiredWallSensorReading[ROBOT_RIGHT] = 165; // 410; // 180;
 
 	sideWallLossFactor = 0.7;	// higher number means we declare loss of IR contact at a nearer distance
 
