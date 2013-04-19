@@ -1,6 +1,6 @@
-#include "DifferentialDriveRobot.h"
+#include "DifferentialDrive.h"
 
-DifferentialDriveRobot::DifferentialDriveRobot() {
+DifferentialDrive::DifferentialDrive() {
 	// set everything to blank or default values (but not motor or encoder!!)
 	trackWidth = 0;
 
@@ -21,7 +21,7 @@ DifferentialDriveRobot::DifferentialDriveRobot() {
 	turnFudgeFactor = 1.5;	
 }
 
-void DifferentialDriveRobot::stop() {
+void DifferentialDrive::stop() {
 	drive(0,0);
 	motor[MOTOR_LEFT]->stop();
 	motor[MOTOR_RIGHT]->stop();
@@ -34,7 +34,7 @@ void DifferentialDriveRobot::stop() {
  *	Assumes that equal velocities will give a straight motion, more or less. If that's not the
  *  case, a child class can override this by setting rightSideSlowFactor.
  */
-void DifferentialDriveRobot::drive(int velocityLeft, int velocityRight) {
+void DifferentialDrive::drive(int velocityLeft, int velocityRight) {
 	// to avoid delays
 	float vl = velocityLeft * leftSideSlowFactor;
 	float vr = velocityRight * rightSideSlowFactor;
@@ -53,7 +53,7 @@ void DifferentialDriveRobot::drive(int velocityLeft, int velocityRight) {
  *
  * Return true for success, false for failure.
  */
-boolean DifferentialDriveRobot::move(double x, double y, boolean inRobotFrame, boolean stopAfterManeuver) {
+boolean DifferentialDrive::move(double x, double y, boolean inRobotFrame, boolean stopAfterManeuver) {
 	if(inRobotFrame) {
 		// must transform from robot frame to world frame
 		odom.transformRobotPointToOdomPoint(&x, &y);
@@ -66,7 +66,7 @@ boolean DifferentialDriveRobot::move(double x, double y, boolean inRobotFrame, b
 /**
  * Set odometry goal, by default in the robot frame.
  */
-void DifferentialDriveRobot::setGoal(double x, double y, boolean inRobotFrame) {
+void DifferentialDrive::setGoal(double x, double y, boolean inRobotFrame) {
 	if(inRobotFrame) {
 		// must transform from robot frame to world frame
 		odom.transformRobotPointToOdomPoint(&x, &y);
@@ -93,7 +93,7 @@ void DifferentialDriveRobot::setGoal(double x, double y, boolean inRobotFrame) {
  *
  * Return true for success, false for failure.
  */
-boolean DifferentialDriveRobot::goToGoal(double goalX, double goalY, boolean stopAfterManeuver) {
+boolean DifferentialDrive::goToGoal(double goalX, double goalY, boolean stopAfterManeuver) {
 	boolean bSuccess = false;
 
 	odom.setGoalPosition(goalX, goalY);
@@ -183,7 +183,7 @@ boolean DifferentialDriveRobot::goToGoal(double goalX, double goalY, boolean sto
 	return bSuccess;
 }
 
-void DifferentialDriveRobot::driveTowardGoal(float velocityFactor) {
+void DifferentialDrive::driveTowardGoal(float velocityFactor) {
 	static long lastUpdate = 0;
 
 	// don't let this be called too often -- we need some time to get a
@@ -225,7 +225,7 @@ void DifferentialDriveRobot::driveTowardGoal(float velocityFactor) {
 * Turn in place until we have changed heading the specified number of radians. Return true for
 * success. User must call stop() when this is done.
 */
-boolean DifferentialDriveRobot::turn(double headingChange, boolean stopAfterManeuver) {
+boolean DifferentialDrive::turn(double headingChange, boolean stopAfterManeuver) {
 	// safeguard against backwards turn
 	headingChange = atan2(sin(headingChange), cos(headingChange));
 
@@ -379,7 +379,7 @@ boolean DifferentialDriveRobot::turn(double headingChange, boolean stopAfterMane
  *	NOT RECOMMENDED IF YOU NEED ACCURACY. Use goToGoal instead. But this is useful for
  *	recovery behavior.
  **/
-void DifferentialDriveRobot::backUp(float distance, boolean stopAfterManeuver) {
+void DifferentialDrive::backUp(float distance, boolean stopAfterManeuver) {
 	// convert distance to encoder ticks
 	// distance = ticks * wheel circumference * (1 / ticks per revolution), or
 	// ticks = distance * ticks per revolution / wheel circumference
@@ -417,7 +417,7 @@ void DifferentialDriveRobot::backUp(float distance, boolean stopAfterManeuver) {
  *	nicely when this is called. Use the sensor on the specified side to
  *	set the value.
  */
-void DifferentialDriveRobot::initDesiredIRSensorReadings(short direction) {
+void DifferentialDrive::initDesiredIRSensorReadings(short direction) {
 	long wallDistance = 0;
 	for(int j = 0; j < 5; j++) {
 		wallDistance += getSideWallDistanceReading(direction);
@@ -444,7 +444,7 @@ void DifferentialDriveRobot::initDesiredIRSensorReadings(short direction) {
  * turn towards the IR sensor that is furthest away. If they are tied, this function
  * returns NO_VALID_DATA.
  */
-int DifferentialDriveRobot::getSideClosestToForwardObstacle() {
+int DifferentialDrive::getSideClosestToForwardObstacle() {
 	long wallReading[2];
 	for(int i = 0; i < 2; i++) {
 		wallReading[i] = getSideWallDistanceReading(i);
@@ -466,7 +466,7 @@ int DifferentialDriveRobot::getSideClosestToForwardObstacle() {
 /**
  *	The key to everything. 
  */
-void DifferentialDriveRobot::followWall(short direction, float velocityFactor, int optimalWallSensorReading) {
+void DifferentialDrive::followWall(short direction, float velocityFactor, int optimalWallSensorReading) {
 	static long lastUpdate = 0;
 
 	// don't let this be called too often -- we need some time to get a
@@ -506,7 +506,7 @@ void DifferentialDriveRobot::followWall(short direction, float velocityFactor, i
 	drive(constrain(drivePWM[MOTOR_LEFT], 0, 254), constrain(drivePWM[MOTOR_RIGHT], 0, 254));
 }
 
-boolean DifferentialDriveRobot::isSideWallLost(short direction) {
+boolean DifferentialDrive::isSideWallLost(short direction) {
 	// ref: http://www.phidgets.com/products.php?product_id=3521
 	// float distanceVoltage = getSideWallDistanceReading( direction ) * 0.0049;
 
@@ -525,7 +525,7 @@ boolean DifferentialDriveRobot::isSideWallLost(short direction) {
 	return false;
 }
 
-void DifferentialDriveRobot::resetCalculatedMovePWMs() {
+void DifferentialDrive::resetCalculatedMovePWMs() {
 	moveCalculatedPWM = movePWM;
 	followWallCalculatedPWM = followWallPWM;
 }
@@ -533,12 +533,12 @@ void DifferentialDriveRobot::resetCalculatedMovePWMs() {
 /**
  * This also resets the stall watcher, an important piece
  */
-void DifferentialDriveRobot::resetOdometers() {
+void DifferentialDrive::resetOdometers() {
 	odom.reset();
 	stallWatcher->reset();
 }
 
-float DifferentialDriveRobot::recover() {
+float DifferentialDrive::recover() {
 	stop();
 	Serial.println("Attempting recovery.");
 

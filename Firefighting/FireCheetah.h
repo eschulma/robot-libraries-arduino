@@ -1,7 +1,7 @@
 #ifndef FireCheetah_h
 #define FireCheetah_h
-#include <Arduino.h>
-#include <DifferentialDriveRobot.h>
+#include "Arduino.h"
+#include <DifferentialDrive.h>
 #include <FirefightingRobot.h>
 #include <math.h>
 
@@ -45,7 +45,7 @@ enum sonarLocation {
 	SONAR_RIGHT_R = 4
 };
 
-class FireCheetah : public DifferentialDriveRobot, public FirefightingRobot {
+class FireCheetah : public DifferentialDrive, public FirefightingRobot {
 	private:
 		// sonar
 		NewPing *sonar[5];

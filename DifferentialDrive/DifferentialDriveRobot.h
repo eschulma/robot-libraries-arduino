@@ -1,6 +1,6 @@
 #ifndef DifferentialDriveRobot_h
 #define DifferentialDriveRobot_h
-#include <Arduino.h>
+#include "Arduino.h"
 #include <ControllerMotor.h>
 #include <Motor.h>
 #include <WheelEncoder.h>
@@ -17,7 +17,7 @@
 
 #define ROBOT_NO_VALID_DATA -1001
 
-class DifferentialDriveRobot {
+class DifferentialDrive {
 	protected:
 		ControllerMotor *motor[2];
 		WheelEncoder *encoder[2];
@@ -97,7 +97,7 @@ class DifferentialDriveRobot {
 		float getFollowWallCalculatedPWM() const { return followWallCalculatedPWM; }
 		boolean isSideWallLost(short direction);
 
-		DifferentialDriveRobot();
+		DifferentialDrive();
 
 #ifdef FIREFIGHTER_TEST
 		friend class RobotTester;	// for testing
