@@ -35,11 +35,38 @@
 #define ENCODER_RIGHT_A_PIN 18
 #define ENCODER_RIGHT_B_PIN 19
 
+#define NO_SONAR_FRONT_WALL_SEEN 1000
+
+enum sonarLocation {
+	SONAR_FRONT = 0,
+	SONAR_LEFT_F = 1,
+	SONAR_LEFT_R = 2,
+	SONAR_RIGHT_F = 3,
+	SONAR_RIGHT_R = 4
+};
+
 class FireCheetah : public DifferentialDriveRobot, public FirefightingRobot {
+	private:
+		// sonar
+		NewPing *sonar[5];
+
+		// sonar functions
+		float getSonarDistance(sonarLocation index);
+		float getMisalignment(short direction);
 	public:
 		FireCheetah();
 		void setup();
 		void fightFire(int initDegrees);
+
+		// sonar functions
+		float getFrontWallDistance();
+		float getSideWallDistance(short direction); // NOTE: this is slow!
+		boolean isAlignmentPossible(short direction, float maxDistance);
+		float getMisalignmentAngle(short direction);
+		boolean isWayForwardBlocked();
+		boolean align(short direction);
+		float getCalculatedWallEnd(short direction);
+		boolean isSideWallPresent(short direction);
 
 #ifdef FIREFIGHTER_TEST
 		friend class RobotTester;	// for testing

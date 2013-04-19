@@ -4,16 +4,15 @@
 #include <Arduino.h>
 #include <Motor.h>
 #include <ControllerMotor.h>
-#include <FirefighterRobot.h>
 #include <FireCheetah.h>
 #include <Pilot.h>
 
 class RobotTester {
 	private:
-		DifferentialDriveRobot* robot;
+		FireCheetah* robot;
 
 	public:
-		RobotTester(DifferentialDriveRobot *inRobot) { robot = inRobot; };
+		RobotTester(FireCheetah *inRobot) { robot = inRobot; };
 	
 void testWallLoss() {
   for(int i = 0; i < 400; i++) {

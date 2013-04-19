@@ -16,15 +16,6 @@
 #define ROBOT_REAR 3
 
 #define ROBOT_NO_VALID_DATA -1001
-#define NO_SONAR_FRONT_WALL_SEEN 1000
-
-enum sonarLocation {
-	SONAR_FRONT = 0,
-	SONAR_LEFT_F = 1,
-	SONAR_LEFT_R = 2,
-	SONAR_RIGHT_F = 3,
-	SONAR_RIGHT_R = 4
-};
 
 class DifferentialDriveRobot {
 	protected:
@@ -62,14 +53,7 @@ class DifferentialDriveRobot {
 
 		// wall following
 		void followWall(short direction, float velocityFactor, int idealWallSensorReading);
-
-		// sonar and fire
-		NewPing *sonar[5];
-
-		// sonar functions
 		float getSideWallDistanceReading(short direction) { return analogRead(wallSensorPin[direction]); };
-		float getSonarDistance(sonarLocation index);		
-		float getMisalignment(short direction);
 
 		// children must override these
 		virtual void setup() = 0;		
@@ -84,6 +68,7 @@ class DifferentialDriveRobot {
 		boolean turn(double deltaHeading, boolean stopAfterManeuver=true);
 		void backUp(float distance, boolean stopAfterManeuver=true);	// go this distance in a straight line, forward or back only DEPRECATED
 		float recover();
+
 		short getMaxAllowedPWM() const { return maxAllowedPWM; }
 		float getMoveCalculatedPWM() const { return moveCalculatedPWM; }
 		// float getBatteryChargeLevel() { return batteryChargeLevel; };
@@ -108,19 +93,9 @@ class DifferentialDriveRobot {
 		void followWall(short direction, float velocityFactor = 1.0) { 	followWall(direction, velocityFactor, desiredWallSensorReading[direction]); };
 		float getFollowWallSpeed() { return followWallPWM; };
 		float getMoveSpeed() { return movePWM; };
-		float getCalculatedWallEnd(short direction);	// note: this uses sonar
 		int getSideClosestToForwardObstacle();
 		float getFollowWallCalculatedPWM() const { return followWallCalculatedPWM; }
-
-		// sonar functions
 		boolean isSideWallLost(short direction);
-		boolean isSideWallPresent(short direction);
-		float getFrontWallDistance();
-		float getSideWallDistance(short direction); // NOTE: this is slow!
-		boolean isAlignmentPossible(short direction, float maxDistance);
-		float getMisalignmentAngle(short direction);
-		boolean isWayForwardBlocked();
-		boolean align(short direction);
 
 		DifferentialDriveRobot();
 
