@@ -41,7 +41,6 @@ void FireCheetah::setup() {
 	
 	for(int i = 0; i < 2; i++) {
 		pinMode(wallSensorPin[i], INPUT);
-		pinMode(wallRearSensorPin[i], INPUT);
 	}
 	pinMode(fireSensorPin, INPUT);
 	// digitalWrite(fireSensorPin, HIGH);	// turns on internal pull-up resistor
@@ -79,21 +78,6 @@ void FireCheetah::setup() {
 	
 	stallWatcher = &robotStallWatcher;
 		
-	// BatteryMonitor monitor(BATTERY_MONITOR_PIN, 3.6);
-	// batteryChargeLevel = monitor.getRelativeCharge();	
-	// a hack, but:
-	// if(batteryChargeLevel > 1.0) {
-		batteryChargeLevel = 1.0;
-	// }
-
-	// Tunable parameters -- start slow! Maximum speed is 254
-	//
-	/* 12V values (at 12V and 30, won't move (too low)
-	followWallSpeed = floor(70.0 / batteryChargeLevel);
-	bangBangDelta = floor(30.0 / batteryChargeLevel);
-	moveSpeed = floor(40.0 / batteryChargeLevel);
-	turnSpeed = floor(40.0 / batteryChargeLevel); */
-
 	maxAllowedPWM = 253; // must be LESS than 254
 
 	// 9V *starting* values -- the drive functions will increase or decrease them

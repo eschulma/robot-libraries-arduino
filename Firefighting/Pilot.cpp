@@ -4,7 +4,7 @@
 #define PRE_ALIGN_DELAY 100
 #define TURN_DELAY 100
 
-Pilot::Pilot(Maze* inMaze, FirefighterRobot* inRobot, mazeHeading startHeading){
+Pilot::Pilot(Maze* inMaze, DifferentialDriveRobot* inRobot, mazeHeading startHeading){
 	maze = inMaze;
 	robot = inRobot;
 	heading = startHeading;

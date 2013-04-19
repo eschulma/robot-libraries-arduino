@@ -1,7 +1,7 @@
 #ifndef Pilot_h
 #define Pilot_h
 #include "Maze.h"
-#include "FirefighterRobot.h"
+#include "DifferentialDriveRobot.h"
 
 #define PILOT_FIRE_EXTINGUISHED 100
 #define PILOT_RETURNED_HOME 200
@@ -30,7 +30,7 @@ class Pilot {
 		mazeHeading heading;
 		float distanceToNext;
 		Maze* maze;
-		FirefighterRobot* robot;
+		DifferentialDriveRobot* robot;
 		pilotNodeCheck nodeCheck;
 		pilotFollowMethod followMethod;
 		float hallwayWidth;
@@ -52,7 +52,7 @@ class Pilot {
 		int go();		
 		int headHome();
 
-		Pilot(Maze* inMaze, FirefighterRobot* inRobot, mazeHeading startHeading);
+		Pilot(Maze* inMaze, DifferentialDriveRobot* inRobot, mazeHeading startHeading);
 
 #ifdef FIREFIGHTER_TEST
 		friend class RobotTester;	// for testing

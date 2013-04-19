@@ -1,6 +1,6 @@
-#include "FirefighterRobot.h"
+#include "DifferentialDriveRobot.h"
 
-FirefighterRobot::FirefighterRobot() {
+DifferentialDriveRobot::DifferentialDriveRobot() {
 	// set everything to blank or default values (but not motor or encoder!!)
 	trackWidth = 0;
 
@@ -22,7 +22,7 @@ FirefighterRobot::FirefighterRobot() {
 	turnFudgeFactor = 1.5;	
 }
 
-void FirefighterRobot::stop() {
+void DifferentialDriveRobot::stop() {
 	drive(0,0);
 	motor[MOTOR_LEFT]->stop();
 	motor[MOTOR_RIGHT]->stop();
@@ -35,7 +35,7 @@ void FirefighterRobot::stop() {
  *	Assumes that equal velocities will give a straight motion, more or less. If that's not the
  *  case, a child class can override this by setting rightSideSlowFactor.
  */
-void FirefighterRobot::drive(int velocityLeft, int velocityRight) {
+void DifferentialDriveRobot::drive(int velocityLeft, int velocityRight) {
 	// to avoid delays
 	float vl = velocityLeft * leftSideSlowFactor;
 	float vr = velocityRight * rightSideSlowFactor;
@@ -54,20 +54,20 @@ void FirefighterRobot::drive(int velocityLeft, int velocityRight) {
  *
  * Return true for success, false for failure.
  */
-boolean FirefighterRobot::move(double x, double y, boolean inRobotFrame) {
+boolean DifferentialDriveRobot::move(double x, double y, boolean inRobotFrame, boolean stopAfterManeuver) {
 	if(inRobotFrame) {
 		// must transform from robot frame to world frame
 		odom.transformRobotPointToOdomPoint(&x, &y);
 	}
 
 	// now x and y are in the world frame
-	return goToGoal(x, y);
+	return goToGoal(x, y, stopAfterManeuver);
 }
 
 /**
  * Set odometry goal, by default in the robot frame.
  */
-void FirefighterRobot::setGoal(double x, double y, boolean inRobotFrame) {
+void DifferentialDriveRobot::setGoal(double x, double y, boolean inRobotFrame) {
 	if(inRobotFrame) {
 		// must transform from robot frame to world frame
 		odom.transformRobotPointToOdomPoint(&x, &y);
@@ -94,7 +94,7 @@ void FirefighterRobot::setGoal(double x, double y, boolean inRobotFrame) {
  *
  * Return true for success, false for failure.
  */
-boolean FirefighterRobot::goToGoal(double goalX, double goalY) {
+boolean DifferentialDriveRobot::goToGoal(double goalX, double goalY, boolean stopAfterManeuver) {
 	boolean bSuccess = false;
 
 	odom.setGoalPosition(goalX, goalY);
@@ -177,10 +177,14 @@ boolean FirefighterRobot::goToGoal(double goalX, double goalY) {
 		bSuccess = true;
 	}
 
+	if(stopAfterManeuver) {
+		stop();
+	}
+
 	return bSuccess;
 }
 
-void FirefighterRobot::driveTowardGoal(float velocityFactor) {
+void DifferentialDriveRobot::driveTowardGoal(float velocityFactor) {
 	static long lastUpdate = 0;
 
 	// don't let this be called too often -- we need some time to get a
@@ -222,7 +226,7 @@ void FirefighterRobot::driveTowardGoal(float velocityFactor) {
 * Turn in place until we have changed heading the specified number of radians. Return true for
 * success. User must call stop() when this is done.
 */
-boolean FirefighterRobot::turn(double headingChange) {
+boolean DifferentialDriveRobot::turn(double headingChange, boolean stopAfterManeuver) {
 	// safeguard against backwards turn
 	headingChange = atan2(sin(headingChange), cos(headingChange));
 
@@ -358,6 +362,10 @@ boolean FirefighterRobot::turn(double headingChange) {
 		bSuccess = true;
 	}
 
+	if(stopAfterManeuver) {
+		stop();
+	}
+
 	return bSuccess;
 }
 
@@ -372,7 +380,7 @@ boolean FirefighterRobot::turn(double headingChange) {
  *	NOT RECOMMENDED IF YOU NEED ACCURACY. Use goToGoal instead. But this is useful for
  *	recovery behavior.
  **/
-void FirefighterRobot::backUp(float distance) {
+void DifferentialDriveRobot::backUp(float distance, boolean stopAfterManeuver) {
 	// convert distance to encoder ticks
 	// distance = ticks * wheel circumference * (1 / ticks per revolution), or
 	// ticks = distance * ticks per revolution / wheel circumference
@@ -399,9 +407,13 @@ void FirefighterRobot::backUp(float distance) {
 		}
 	} while((!stallWatcher->isStalled()) && (getOdometerValue(moveMotorIndex) < ticks) &&  
 			(getOdometerValue(moveMotorIndex) > -ticks));
+
+	if(stopAfterManeuver) {
+		stop();
+	}
 }
 
-void FirefighterRobot::turnFanOn(boolean on) {
+void DifferentialDriveRobot::turnFanOn(boolean on) {
 	if(on) {
 		digitalWrite(fanControlPin, HIGH);
 	}
@@ -415,7 +427,7 @@ void FirefighterRobot::turnFanOn(boolean on) {
  *	nicely when this is called. Use the sensor on the specified side to
  *	set the value.
  */
-void FirefighterRobot::initDesiredIRSensorReadings(short direction) {
+void DifferentialDriveRobot::initDesiredIRSensorReadings(short direction) {
 	long wallDistance = 0;
 	for(int j = 0; j < 5; j++) {
 		wallDistance += getSideWallDistanceReading(direction);
@@ -442,7 +454,7 @@ void FirefighterRobot::initDesiredIRSensorReadings(short direction) {
  * turn towards the IR sensor that is furthest away. If they are tied, this function
  * returns NO_VALID_DATA.
  */
-int FirefighterRobot::getSideClosestToForwardObstacle() {
+int DifferentialDriveRobot::getSideClosestToForwardObstacle() {
 	long wallReading[2];
 	for(int i = 0; i < 2; i++) {
 		wallReading[i] = getSideWallDistanceReading(i);
@@ -464,7 +476,7 @@ int FirefighterRobot::getSideClosestToForwardObstacle() {
 /**
  *	The key to everything. 
  */
-void FirefighterRobot::followWall(short direction, float velocityFactor, int optimalWallSensorReading) {
+void DifferentialDriveRobot::followWall(short direction, float velocityFactor, int optimalWallSensorReading) {
 	static long lastUpdate = 0;
 
 	// don't let this be called too often -- we need some time to get a
@@ -504,7 +516,7 @@ void FirefighterRobot::followWall(short direction, float velocityFactor, int opt
 	drive(constrain(drivePWM[MOTOR_LEFT], 0, 254), constrain(drivePWM[MOTOR_RIGHT], 0, 254));
 }
 
-boolean FirefighterRobot::isSideWallLost(short direction) {
+boolean DifferentialDriveRobot::isSideWallLost(short direction) {
 	// ref: http://www.phidgets.com/products.php?product_id=3521
 	// float distanceVoltage = getSideWallDistanceReading( direction ) * 0.0049;
 
@@ -526,7 +538,7 @@ boolean FirefighterRobot::isSideWallLost(short direction) {
 /**
  * Use sonar (the one furthest back) to tell us if we are next to a wall on the side.
  */
-boolean FirefighterRobot::isSideWallPresent(short direction) {
+boolean DifferentialDriveRobot::isSideWallPresent(short direction) {
 	boolean bWallFound = false;
 
 	sonarLocation loc = SONAR_LEFT_R;
@@ -545,7 +557,7 @@ boolean FirefighterRobot::isSideWallPresent(short direction) {
  * CM from nearest obstacle for this sonar.
  * This will return ROBOT_NO_VALID_DATA for distances greater than max distance -- be careful.
  */
-float FirefighterRobot::getSonarDistance(sonarLocation loc) {
+float DifferentialDriveRobot::getSonarDistance(sonarLocation loc) {
 	// Serial.print("Getting distance for sonar wall ");
 	// Serial.println(loc);
 
@@ -566,7 +578,7 @@ float FirefighterRobot::getSonarDistance(sonarLocation loc) {
  *
  *	For the right, we reverse front and rear.
  */
-float FirefighterRobot::getMisalignment(short direction) {
+float DifferentialDriveRobot::getMisalignment(short direction) {
 	boolean readingFailed = false;
 
 	sonarLocation one = SONAR_LEFT_F;
@@ -646,7 +658,7 @@ float FirefighterRobot::getMisalignment(short direction) {
  *	Line up robot parallel to wall. We use the boolean to say if this was
  *	possible or successful. Right now, no safety checks.
  */
-boolean FirefighterRobot::align(short direction) {
+boolean DifferentialDriveRobot::align(short direction) {
 	boolean bSuccess = false;
 
 	Serial.print("Aligning robot, side ");
@@ -674,7 +686,7 @@ boolean FirefighterRobot::align(short direction) {
  *
  * Returns ROBOT_NO_VALID_DATA if failed.
  */
-float FirefighterRobot::getMisalignmentAngle(short direction) {
+float DifferentialDriveRobot::getMisalignmentAngle(short direction) {
 	float sensorSpacing = 7.7;
 
  	float y = getMisalignment(direction);
@@ -739,7 +751,7 @@ float FirefighterRobot::getMisalignmentAngle(short direction) {
  * To make simple comparisons easier for callers, we return NO_SONAR_FRONT_WALL_SEEN
  * (a high positive number) when no wall is seen.
  */
-float FirefighterRobot::getFrontWallDistance() {
+float DifferentialDriveRobot::getFrontWallDistance() {
 	float value = getSonarDistance(SONAR_FRONT);
 
 	// Ping library returns 0 when outside of max distance
@@ -752,7 +764,7 @@ float FirefighterRobot::getFrontWallDistance() {
 /**
  * Are the sonar close enough to a wall to make for reliable alignment?
  */
-boolean FirefighterRobot::isAlignmentPossible(short direction, float maxDistance) {
+boolean DifferentialDriveRobot::isAlignmentPossible(short direction, float maxDistance) {
 	boolean bResult = true;
 
 	sonarLocation mySonar[2] = {SONAR_LEFT_R, SONAR_LEFT_F};
@@ -779,7 +791,7 @@ boolean FirefighterRobot::isAlignmentPossible(short direction, float maxDistance
  * we'll use that one. Returns ROBOT_NO_VALID_DATA if we don't have a wall, so caller
  * needs to check for that.
  */
-float FirefighterRobot::getSideWallDistance(short direction) {
+float DifferentialDriveRobot::getSideWallDistance(short direction) {
 	float distance = 0;
 	float thisDistance[2] = {0, 0};
 	short numGoodValues = 0;
@@ -841,7 +853,7 @@ float FirefighterRobot::getSideWallDistance(short direction) {
  * from the wall, the angle to the wall, and the relative position of the
  * sensors on the robot.
  */
-float FirefighterRobot::getCalculatedWallEnd(short direction) {
+float DifferentialDriveRobot::getCalculatedWallEnd(short direction) {
 	// see what the sensors say first
 //	float theta = getMisalignmentAngle(direction);
 //	if(theta == ROBOT_NO_VALID_DATA) {
@@ -893,7 +905,7 @@ float FirefighterRobot::getCalculatedWallEnd(short direction) {
 	return x;
 }
 
-float FirefighterRobot::getFireReading() {
+float DifferentialDriveRobot::getFireReading() {
 	float reading = 0;
 	for(int i = 0; i < 5; i++) {
 		reading += (float)analogRead(fireSensorPin);
@@ -903,7 +915,7 @@ float FirefighterRobot::getFireReading() {
 	return reading;
 }
 
-boolean FirefighterRobot::isFire() {
+boolean DifferentialDriveRobot::isFire() {
 	float reading = getFireReading();
 	if(reading < fireThresholdReading) {
 		return true;
@@ -920,7 +932,7 @@ boolean FirefighterRobot::isFire() {
 //	return false;
 //}
 
-void FirefighterRobot::setFanServo(short degrees) {
+void DifferentialDriveRobot::setFanServo(short degrees) {
 	if(degrees < -180) {
 		degrees = (degrees + 360) % 360;
 	}
@@ -931,11 +943,11 @@ void FirefighterRobot::setFanServo(short degrees) {
 	fanServo.write(val);
 }
 
-int FirefighterRobot::panServoForFire() {
+int DifferentialDriveRobot::panServoForFire() {
 	return panServoForFire(90, -180);
 }
 
-int FirefighterRobot::panServoForFire(int startDegree, int endDegree) {
+int DifferentialDriveRobot::panServoForFire(int startDegree, int endDegree) {
 	// only go one way
 	if(endDegree > startDegree) {
 		int temp = startDegree;
@@ -1023,7 +1035,7 @@ int FirefighterRobot::panServoForFire(int startDegree, int endDegree) {
  *	The rules require that we be within 12 inches (30.48 cm) of the candle
  *	before extinguishing it.
  */
-void FirefighterRobot::fightFire(int initDegrees) {
+void DifferentialDriveRobot::fightFire(int initDegrees) {
 	resetStallWatcher();
 
 	Serial.print("degrees to turn: ");
@@ -1192,7 +1204,7 @@ void FirefighterRobot::fightFire(int initDegrees) {
  	}
 }
 
-void FirefighterRobot::resetCalculatedMovePWMs() {
+void DifferentialDriveRobot::resetCalculatedMovePWMs() {
 	moveCalculatedPWM = movePWM;
 	followWallCalculatedPWM = followWallPWM;
 }
@@ -1200,12 +1212,12 @@ void FirefighterRobot::resetCalculatedMovePWMs() {
 /**
  * This also resets the stall watcher, an important piece
  */
-void FirefighterRobot::resetOdometers() {
+void DifferentialDriveRobot::resetOdometers() {
 	odom.reset();
 	stallWatcher->reset();
 }
 
-float FirefighterRobot::recover() {
+float DifferentialDriveRobot::recover() {
 	stop();
 	Serial.println("Attempting recovery.");
 
@@ -1236,7 +1248,7 @@ float FirefighterRobot::recover() {
 	return angleTurned;
 }
 
-boolean FirefighterRobot::isWayForwardBlocked() {
+boolean DifferentialDriveRobot::isWayForwardBlocked() {
 	boolean isBlocked = false;
 
 	delay(50);

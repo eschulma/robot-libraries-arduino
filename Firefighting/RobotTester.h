@@ -10,10 +10,10 @@
 
 class RobotTester {
 	private:
-		FirefighterRobot* robot;
+		DifferentialDriveRobot* robot;
 
 	public:
-		RobotTester(FirefighterRobot *inRobot) { robot = inRobot; };
+		RobotTester(DifferentialDriveRobot *inRobot) { robot = inRobot; };
 	
 void testWallLoss() {
   for(int i = 0; i < 400; i++) {
