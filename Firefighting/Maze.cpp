@@ -24,7 +24,7 @@ float Maze::getHallwayWidth() {
 }
 
 roomNode Maze::getRoomNode(short id) {
-	for(int i = 0; i < getNumRooms(); i++) {
+	for(short i = 0; i < roomList.size(); i++) {
 		roomNode room = roomList[i];
 		if(room.id == id) {
 			return room;
@@ -38,37 +38,4 @@ roomNode Maze::getRoomNode(short id) {
 	return junk;
 }
 
-mapNode Maze::getPathNode(short pathIndex) {
-	if(pathIndex > getPathLength()) {
-		Serial.print("!!!!!!!!!! Error!!! Path index outside bounds: ");
-		Serial.println(pathIndex);
-		return nodeList[0];
-	}
-
-	short nodeIndex = pathList[pathIndex];
-	if(nodeIndex > getNumNodes()) {
-		Serial.print("!!!!!!!!!! Error!!! Node index for path list outside bounds, index was: ");
-		Serial.println(pathIndex);
-		return nodeList[0];
-	}
-
-	return nodeList[nodeIndex];
-}
-
-mapNode Maze::getReturnPathNode(short returnPathIndex) {
-	if(returnPathIndex > getReturnPathLength()) {
-		Serial.print("!!!!!!!!!! Error!!! Return path index outside bounds: ");
-		Serial.println(returnPathIndex);
-		return nodeList[0];
-	}
-
-	short nodeIndex = returnPathList[returnPathIndex];
-	if(nodeIndex > getNumNodes()) {
-		Serial.print("!!!!!!!!!! Error!!! Node index for return path list outside bounds, index was: ");
-		Serial.println(returnPathIndex);
-		return nodeList[0];
-	}
-
-	return nodeList[nodeIndex];
-}
 

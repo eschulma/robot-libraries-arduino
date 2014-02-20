@@ -4,21 +4,23 @@
 #define PRE_ALIGN_DELAY 100
 #define TURN_DELAY 100
 
-Pilot::Pilot(Maze* inMaze, FireCheetah* inRobot, mazeHeading startHeading){
+Pilot::Pilot(Maze* inMaze, Planner* inPlanner, FireCheetah* inRobot, mazeHeading startHeading){
 	maze = inMaze;
+	planner = inPlanner;
 	robot = inRobot;
 	heading = startHeading;
-	pathIndex = 0;
 	lastPingTime = 0;
 
 	followMethod = PILOT_FOLLOW_NONE;
 	nodeCheck = PILOT_CHECK_FORWARD;
 	bSwitchAfterWallCheck = false;
 	bGoingHome = false;
+
+	planner->setup();
 }
 
-void Pilot::setStart(short startPathIndex, mazeHeading startHeading) {
-	pathIndex = startPathIndex;
+void Pilot::setStart(Planner* inPlanner, mazeHeading startHeading) {
+	planner = inPlanner;
 	heading = startHeading;
 }
 
@@ -50,13 +52,12 @@ boolean Pilot::fightFire() {
  *
  **/
 int Pilot::setCourse() {
+	currentNode = planner->getCurrentNode();
 	if(bGoingHome) {
 		Serial.println("Heading home.");
-		currentNode = maze->getReturnPathNode(returnPathIndex);
 	}
 	else {
 		Serial.println("Looking for candle.");
-		currentNode = maze->getPathNode(pathIndex);
 	}
 
 	if((bGoingHome) && (currentNode.id == 0)) {
@@ -115,28 +116,22 @@ int Pilot::setCourse() {
     	}
 	}
 
-    if(!bGoingHome) {
-		if(pathIndex >= maze->getPathLength() - 1) {
+    if(planner->isFinished()) {
+    	if(!bGoingHome) {
 			// we are at the last node..and failed to find the fire, presumably.
 			// we stop at second to last path index because setCourse includes the next node
 			Serial.println("Finished course, no joy.");
 			return -1;
 		}
-    }
-    else {
-		if(returnPathIndex >= maze->getReturnPathLength() - 1) {
+    	else {
 			Serial.println("!! Exceeded path limits on return home.");
 			return -1;
 		}
     }
 
-    if(!bGoingHome) {
-    	nextNode = maze->getPathNode(pathIndex + 1);
-    }
-    else {
-    	nextNode = maze->getReturnPathNode(returnPathIndex + 1);
-    }
-	
+    nextNode = planner->chooseNextNode();
+
+    /*
 	Serial.println("");
 	if(!bGoingHome) {
 		Serial.print("At path index ");
@@ -145,7 +140,8 @@ int Pilot::setCourse() {
 	else {
 		Serial.print("At return path index ");
 		Serial.println(returnPathIndex);
-	}
+	} */
+
 	Serial.print("Current node id: ");
 	Serial.println(currentNode.id);
 	Serial.print("Next node id: ");
@@ -167,8 +163,8 @@ int Pilot::setCourse() {
 	
 	if(nodeDistance < 0) {
 		// invalid path
-		Serial.print("Can't find neighbor path for current path index ");
-		Serial.println(pathIndex);
+		Serial.print("Can't find neighbor path for current node ");
+		Serial.println(currentNode.id);
 		return -2;
 	}
 	
@@ -236,8 +232,8 @@ int Pilot::setCourse() {
 //		}
 	else {
 		// this shouldn't happen; unless we add wall appearance as a node option
-		Serial.print("Can't find right check to use for next node, current index is ");
-		Serial.println(pathIndex);
+		Serial.print("Can't find right check to use for next node, current node is ");
+		Serial.println(currentNode.id);
 		return -2;
 	}
 				
@@ -272,10 +268,10 @@ int Pilot::setCourse() {
 	}
 
 	// (put any handtuning here)
-	if(pathIndex == 0) {
+	/* if(pathIndex == 0) {
 		doAlignLeft = false;
 		doAlignRight = false;
-	}
+	} */
 	if((currentNode.id == 1) && (nextNode.id == 2)) {
 		followMethod = PILOT_FOLLOW_LEFT;
 		doAlignLeft = true;
@@ -358,13 +354,13 @@ int Pilot::setCourse() {
 	robot->resetCalculatedMovePWMs();
 	
 	if(!bGoingHome) {
-		Serial.print("For path index ");
-		Serial.println(pathIndex);
+		Serial.print("For node ");
 	}
 	else {
-		Serial.print("For return path index ");
-		Serial.println(returnPathIndex);
+		Serial.print("For return node ");
 	}
+	Serial.println(currentNode.id);
+
 	Serial.print("Follow method is ");
 	Serial.println(followMethod);
 	Serial.print("Check method is ");
@@ -374,13 +370,6 @@ int Pilot::setCourse() {
 	// Serial.print("Front stop distance is ");
 	// Serial.println(frontStopDistance);
 	
-	if(!bGoingHome) {
-		pathIndex++;
-	}
-	else {
-		returnPathIndex++;
-	}
-
 	return 0;
 }
 
@@ -828,16 +817,7 @@ int Pilot::headHome() {
 	Serial.println("In head home.");
 	short roomId = currentNode.id;
 
-	for(int i = 0; i < maze->getReturnPathLength(); i++) {
-		mapNode node = maze->getReturnPathNode(i);
-		if(node.id == currentNode.id) {
-			returnPathIndex = i;
-			bGoingHome = true;
-			Serial.print("Return path index is ");
-			Serial.println(returnPathIndex);
-			return 0;
-		}
-	}
+	planner->returnHome(roomId);
 
 	// uh-oh, didn't find it
 	Serial.print("!!! Unable to find return path index for node id ");

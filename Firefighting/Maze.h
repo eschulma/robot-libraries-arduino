@@ -2,9 +2,17 @@
 #define Maze_h
 #include <Arduino.h>
 
-#define MAZE_NUM_NODES 12
-#define MAZE_PATH_LENGTH 18
-#define MAZE_NUM_ROOMS 4
+// STL -- see http://andybrown.me.uk/wk/2011/01/15/the-standard-template-library-stl-for-avr-with-c-streams/
+#include <new.h>	// Arduino library that is needed for STL to work
+#include <iterator>
+#include <vector>
+#include <list>
+
+// #define MAZE_NUM_NODES 12
+// #define MAZE_PATH_LENGTH 18
+// #define MAZE_NUM_ROOMS 4
+#define MAZE_RETURN_PATH_LENGTH 17
+
 
 typedef struct {
 	short id;
@@ -29,28 +37,27 @@ enum mazeHeading {
 
 #define MAZE_WALL -1
 #define MAZE_OPEN_SPACE -2
-#define MAZE_RETURN_PATH_LENGTH 17
 
 class Maze {
 	private:
+		// children must provide these
 		virtual void setup() = 0;
 	protected:
-		mapNode nodeList[MAZE_NUM_NODES];
-		short pathList[MAZE_PATH_LENGTH];
-		short returnPathList[MAZE_RETURN_PATH_LENGTH];
-		roomNode roomList[MAZE_NUM_ROOMS];
-	
+		std::vector<mapNode> nodeList;
+		std::vector<roomNode> roomList;
+
 		float nodeRadius;
 		float hallwayWidth;
 		void emptyMaze();	// be careful, arrays must be allocated and assigned abefore calling this
 	public:
-		short getNumNodes() { return MAZE_NUM_NODES; };
-		short getNumRooms() { return MAZE_NUM_ROOMS; };
-		short getPathLength() { return MAZE_PATH_LENGTH; };
-		short getReturnPathLength() { return MAZE_RETURN_PATH_LENGTH; };
+		virtual short getPathLength() = 0;
+		virtual short getReturnPathLength() = 0;
+		virtual mapNode getPathNode(short pathIndex) = 0;
+		virtual mapNode getReturnPathNode(short pathIndex) = 0;
 
-		mapNode getPathNode(short pathIndex);
-		mapNode getReturnPathNode(short pathIndex);
+		short getNumNodes() { return nodeList.size(); };
+		short getNumRooms() { return roomList.size(); };
+
 		boolean isRoom(short nodeIndex) { return nodeList[nodeIndex].isRoom; };
 		float getNodeRadius() { return nodeRadius; };
 		float getHallwayWidth();

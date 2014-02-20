@@ -3,8 +3,11 @@
 
 void AbingtonMaze::setup() {
 
-	nodeRadius = 60;	// cm; need large value to turn sensors on earlier (sigh)
+	nodeRadius = 60;// cm; need large value to turn sensors on earlier (sigh)
 	hallwayWidth = 46;
+
+	// must be greater than number of nodes!!
+	nodeList.resize(12);
 
 	// arrays must be allocated and assigned before calling this
 	emptyMaze();
@@ -13,89 +16,113 @@ void AbingtonMaze::setup() {
 	nodeList[0].neighbor[MAZE_SOUTH] = 1;
 	nodeList[0].distToNeighbor[MAZE_SOUTH] = 77;
 	nodeList[0].neighbor[MAZE_EAST] = 5;
-	
+
 	nodeList[1].neighbor[MAZE_NORTH] = 0;
-	nodeList[1].distToNeighbor[MAZE_NORTH] = nodeList[0].distToNeighbor[MAZE_SOUTH];
+	nodeList[1].distToNeighbor[MAZE_NORTH] =
+			nodeList[0].distToNeighbor[MAZE_SOUTH];
 	nodeList[1].neighbor[MAZE_WEST] = 2;
 	nodeList[1].distToNeighbor[MAZE_WEST] = 72;
 	nodeList[1].neighbor[MAZE_SOUTH] = 10; // 8; we can't go from 1 to 8, no good checks
 	nodeList[1].distToNeighbor[MAZE_SOUTH] = 120;
 	nodeList[1].neighbor[MAZE_EAST] = 4;
-	nodeList[1].distToNeighbor[MAZE_EAST] = nodeList[4].distToNeighbor[MAZE_WEST];
-	
+	nodeList[1].distToNeighbor[MAZE_EAST] =
+			nodeList[4].distToNeighbor[MAZE_WEST];
+
 	nodeList[2].neighbor[MAZE_EAST] = 1;
-	nodeList[2].distToNeighbor[MAZE_EAST] = nodeList[1].distToNeighbor[MAZE_WEST];
+	nodeList[2].distToNeighbor[MAZE_EAST] =
+			nodeList[1].distToNeighbor[MAZE_WEST];
 	nodeList[2].neighbor[MAZE_NORTH] = 3;
 	nodeList[2].distToNeighbor[MAZE_NORTH] = 46 + 5;
-	
+
 	nodeList[3].isRoom = true;
 	nodeList[3].neighbor[MAZE_SOUTH] = 2;
-	nodeList[3].distToNeighbor[MAZE_SOUTH] = nodeList[2].distToNeighbor[MAZE_NORTH];
-	
+	nodeList[3].distToNeighbor[MAZE_SOUTH] =
+			nodeList[2].distToNeighbor[MAZE_NORTH];
+
 	nodeList[4].neighbor[MAZE_WEST] = 1;
 	nodeList[4].distToNeighbor[MAZE_WEST] = 46;	// hallway is wider here, but going short is OK
 	nodeList[4].neighbor[MAZE_NORTH] = 7;
 	nodeList[4].neighbor[MAZE_EAST] = 6;
 	nodeList[4].distToNeighbor[MAZE_NORTH] = 46;
-	
+
 	nodeList[5].neighbor[MAZE_WEST] = 0;
 	nodeList[5].neighbor[MAZE_SOUTH] = 6;
-	
+
 	nodeList[6].neighbor[MAZE_WEST] = 4;
 	nodeList[6].neighbor[MAZE_NORTH] = 5;
-	
+
 	nodeList[7].isRoom = true;
 	nodeList[7].neighbor[MAZE_SOUTH] = 4;
-	nodeList[7].distToNeighbor[MAZE_SOUTH] = nodeList[4].distToNeighbor[MAZE_NORTH];
-	
+	nodeList[7].distToNeighbor[MAZE_SOUTH] =
+			nodeList[4].distToNeighbor[MAZE_NORTH];
+
 	nodeList[8].neighbor[MAZE_NORTH] = 1;
-	nodeList[8].neighbor[MAZE_EAST]  = 9;
+	nodeList[8].neighbor[MAZE_EAST] = 9;
 	nodeList[8].distToNeighbor[MAZE_EAST] = 46 + 5 + 20;
 	nodeList[8].neighbor[MAZE_SOUTH] = 10;
-	
+
 	nodeList[9].isRoom = true;
 	nodeList[9].neighbor[MAZE_WEST] = 8;
-	nodeList[9].distToNeighbor[MAZE_WEST] = nodeList[8].distToNeighbor[MAZE_EAST];
-	
+	nodeList[9].distToNeighbor[MAZE_WEST] =
+			nodeList[8].distToNeighbor[MAZE_EAST];
+
 	nodeList[10].neighbor[MAZE_NORTH] = 8;
 	nodeList[10].neighbor[MAZE_WEST] = 11;
 	nodeList[10].distToNeighbor[MAZE_WEST] = 46 + 5 + 5;
-	
+
 	nodeList[11].isRoom = true;
 	nodeList[11].neighbor[MAZE_EAST] = 10;
-	nodeList[11].distToNeighbor[MAZE_EAST] = nodeList[10].distToNeighbor[MAZE_WEST];
-	
-	// define path
-	pathList[0] = 0;
-	pathList[1] = 1;
-	pathList[2] = 2;
-	pathList[3] = 3;
-	pathList[4] = 2;
-	pathList[5] = 1;
-	pathList[6] = 10;
-	pathList[7] = 11;
-	pathList[8] = 10;
-	pathList[9] = 8;
-	pathList[10] = 9;
-	pathList[11] = 8;
-	pathList[12] = 1;
-	pathList[13] = 0;
-	pathList[14] = 5;
-	pathList[15] = 6;
-	pathList[16] = 4;
-	pathList[17] = 7;
+	nodeList[11].distToNeighbor[MAZE_EAST] =
+			nodeList[10].distToNeighbor[MAZE_WEST];
+	// If we add more nodes, change resize command above!!!
 
-	// pathList = { 0, 1, 2, 3, 2, 1, 10, 11, 10, 8, 9, 8, 1, 0, 5, 6, 4, 7 };
-	
+	// define path
+	pathList.resize(18);	// this is optional
+
+	pathNode p;
+	p.id = 0;
+	p.decision = NO_DECISION_REQUIRED;
+	pathList.push_back(p);
+	p.id = 1;
+	pathList.push_back(p);
+	p.id = 2;
+	pathList.push_back(p);
+	p.id = 3;
+	pathList.push_back(p);
+	p.id = 2;
+	pathList.push_back(p);
+	p.id = 1;
+	pathList.push_back(p);
+	p.id = 10;
+	pathList.push_back(p);
+	p.id = 11;
+	pathList.push_back(p);
+	p.id = 10;
+	p.decision = SOUTHEAST_ROOM_ENTRANCE;
+	pathList.push_back(p); // just exited southwest room
+	p.id = 8;
+	p.decision = NO_DECISION_REQUIRED;
+	pathList.push_back(p);
+	p.id = 9;
+	pathList.push_back(p);
+
+	// old pathList = { 0, 1, 2, 3, 2, 1, 10, 11, 10, 8, 9, 8, 1, 0, 5, 6, 4, 7 };
+
 	// define room parameters
-	roomList[0].id = 7;
-	roomList[0].frontStopDistance = 23;
-	roomList[1].id = 3;
-	roomList[1].frontStopDistance = 40;
-	roomList[2].id = 11;
-	roomList[2].frontStopDistance = 40;
-	roomList[3].id = 9;
-	roomList[3].frontStopDistance = 100;	// won't work for over 50...
+	roomList.resize(4);  // optional
+	roomNode room;
+	room.id = 7;
+	room.frontStopDistance = 23;
+	roomList.push_back(room);
+	room.id = 3;
+	room.frontStopDistance = 40;
+	roomList.push_back(room);
+	room.id = 11;
+	room.frontStopDistance = 40;
+	roomList.push_back(room);
+	room.id = 9;
+	room.frontStopDistance = 100;
+	roomList.push_back(room);
 
 	returnPathList[0] = 3;	// room
 	returnPathList[1] = 2;
@@ -114,4 +141,51 @@ void AbingtonMaze::setup() {
 	returnPathList[14] = 8;
 	returnPathList[15] = 1;
 	returnPathList[16] = 0;
+}
+
+mapNode AbingtonMaze::getPathNode(short pathIndex) {
+	if (pathIndex > getPathLength()) {
+		Serial.print("!!!!!!!!!! Error!!! Path index outside bounds: ");
+		Serial.println(pathIndex);
+		return nodeList[0];
+	}
+
+	// get iterator and move it forward
+	std::list<pathNode>::iterator it = pathList.begin();
+	std::advance(it, pathIndex);
+	short nodeIndex = it->id;
+	if (nodeIndex > getNumNodes()) {
+		Serial.print(
+				"!!!!!!!!!! Error!!! Node index for path list outside bounds, index was: ");
+		Serial.println(pathIndex);
+		return nodeList[0];
+	}
+
+	return nodeList[nodeIndex];
+}
+
+mapNode AbingtonMaze::getReturnPathNode(short returnPathIndex) {
+	if (returnPathIndex > getReturnPathLength()) {
+		Serial.print("!!!!!!!!!! Error!!! Return path index outside bounds: ");
+		Serial.println(returnPathIndex);
+		return nodeList[0];
+	}
+
+	short nodeIndex = returnPathList[returnPathIndex];
+	if (nodeIndex > getNumNodes()) {
+		Serial.print(
+				"!!!!!!!!!! Error!!! Node index for return path list outside bounds, index was: ");
+		Serial.println(returnPathIndex);
+		return nodeList[0];
+	}
+
+	return nodeList[nodeIndex];
+}
+
+short AbingtonMaze::getPathLength() {
+	return pathList.size();
+}
+
+ short AbingtonMaze::getReturnPathLength() {
+	return MAZE_RETURN_PATH_LENGTH;
 }
