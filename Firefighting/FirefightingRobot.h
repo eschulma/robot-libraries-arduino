@@ -10,14 +10,16 @@
 
 #include "Arduino.h"
 #include <Servo.h>
+#include <MLX90620.h>
 
 #define ROBOT_NO_FIRE_FOUND -1000
 
 class FirefightingRobot {
 protected:
 	Servo fanServo;
+	MLX90620 fireSensor;
 
-	short fireSensorPin;
+	// short fireSensorPin;
 	short fanControlPin;
 	short fireThresholdReading;
 	short fireOutReading;

@@ -1,11 +1,11 @@
 #include <FireCheetah.h>
+#include <Servo.h>
 #include <ControllerMotor.h>
 #include <Encoder.h>
 #include <WheelEncoder.h>
 #include <Arduino.h>
 // #include <BatteryMonitor.h>
 #include <StallWatcher.h>
-#include <Servo.h>
 
 ControllerMotor robotMotor[2] = { ControllerMotor(ARDUINO_MOTOR_SHIELD_LEFT_ENABLE_PIN, ARDUINO_MOTOR_SHIELD_LEFT_DIRECTION_PIN, ARDUINO_MOTOR_SHIELD_LEFT_BRAKE_PIN),
     ControllerMotor(ARDUINO_MOTOR_SHIELD_RIGHT_ENABLE_PIN, ARDUINO_MOTOR_SHIELD_RIGHT_DIRECTION_PIN, ARDUINO_MOTOR_SHIELD_RIGHT_BRAKE_PIN) };
@@ -36,13 +36,12 @@ FireCheetah::FireCheetah() {
 void FireCheetah::setup() {
 	wallSensorPin[ROBOT_LEFT] = WALL_LEFT_SENSOR_PIN;
 	wallSensorPin[ROBOT_RIGHT] = WALL_RIGHT_SENSOR_PIN;
-	fireSensorPin = FIRE_SENSOR_PIN;
 	fanControlPin = FAN_CONTROL_PIN;
 	
 	for(int i = 0; i < 2; i++) {
 		pinMode(wallSensorPin[i], INPUT);
 	}
-	pinMode(fireSensorPin, INPUT);
+	// pinMode(fireSensorPin, INPUT);
 	// digitalWrite(fireSensorPin, HIGH);	// turns on internal pull-up resistor
 		
 	pinMode(fanControlPin, OUTPUT);
@@ -100,8 +99,8 @@ void FireCheetah::setup() {
 	 *
 	 * Set this high for single room mode, as we know the fire is there!
 	 */
-	fireThresholdReading = 600;
-	fireOutReading = 1000;
+	fireThresholdReading = 50; // 50 C = 122 F
+	fireOutReading = 40;
 	
 	/**
 	 * IR values. Tested on white walls, 23 cm distance.
@@ -217,9 +216,6 @@ void FireCheetah::fightFire(int initDegrees) {
  		Serial.println("Lost the fire?!?!");
  	}
 
- 	float thisFireReadingThreshold = getFireReading() + 300.0;
- 	thisFireReadingThreshold = max(thisFireReadingThreshold, fireOutReading);
-
  	// just a straight blast first
  	turnFanOn(true);
 
@@ -231,11 +227,11 @@ void FireCheetah::fightFire(int initDegrees) {
  	for(int i = 0; i < 100; i++) {
  		delay(100);
  		reading = getFireReading();
- 		if(reading >  thisFireReadingThreshold) {
+ 		if(reading <  fireOutReading) {
  			delay(1000);
  			// double check
  			reading = getFireReading();
- 			if(reading > thisFireReadingThreshold) {
+ 			if(reading < fireOutReading) {
  				Serial.print("Fire is out!  ");
  				Serial.println(reading);
  				// give it another few s to make sure the fire is really out!

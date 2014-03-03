@@ -80,49 +80,26 @@ void AbingtonMaze::setup() {
 	pathList.resize(18);	// this is optional
 
 	pathNode p;
-	p.id = 0;
-	p.decision = NO_DECISION_REQUIRED;
-	pathList.push_back(p);
-	p.id = 1;
-	pathList.push_back(p);
-	p.id = 2;
-	pathList.push_back(p);
-	p.id = 3;
-	pathList.push_back(p);
-	p.id = 2;
-	pathList.push_back(p);
-	p.id = 1;
-	pathList.push_back(p);
-	p.id = 10;
-	pathList.push_back(p);
-	p.id = 11;
-	pathList.push_back(p);
-	p.id = 10;
-	p.decision = SOUTHEAST_ROOM_ENTRANCE;
-	pathList.push_back(p); // just exited southwest room
-	p.id = 8;
-	p.decision = NO_DECISION_REQUIRED;
-	pathList.push_back(p);
-	p.id = 9;
-	pathList.push_back(p);
+	pathList.push_back((pathNode){0, NO_DECISION_REQUIRED});
+	pathList.push_back((pathNode){1, NO_DECISION_REQUIRED});
+	pathList.push_back((pathNode){2, NO_DECISION_REQUIRED});
+	pathList.push_back((pathNode){3, NO_DECISION_REQUIRED});
+	pathList.push_back((pathNode){2, NO_DECISION_REQUIRED});
+	pathList.push_back((pathNode){1, NO_DECISION_REQUIRED});
+	pathList.push_back((pathNode){10, NO_DECISION_REQUIRED});
+	pathList.push_back((pathNode){11, NO_DECISION_REQUIRED});
+	pathList.push_back((pathNode){10, SOUTHEAST_ROOM_ENTRANCE});
+	pathList.push_back((pathNode){8, NO_DECISION_REQUIRED});
+	pathList.push_back((pathNode){9, NO_DECISION_REQUIRED});
 
 	// old pathList = { 0, 1, 2, 3, 2, 1, 10, 11, 10, 8, 9, 8, 1, 0, 5, 6, 4, 7 };
 
 	// define room parameters
 	roomList.resize(4);  // optional
-	roomNode room;
-	room.id = 7;
-	room.frontStopDistance = 23;
-	roomList.push_back(room);
-	room.id = 3;
-	room.frontStopDistance = 40;
-	roomList.push_back(room);
-	room.id = 11;
-	room.frontStopDistance = 40;
-	roomList.push_back(room);
-	room.id = 9;
-	room.frontStopDistance = 100;
-	roomList.push_back(room);
+	roomList.push_back((roomNode){7, 23});
+	roomList.push_back((roomNode){3, 40});
+	roomList.push_back((roomNode){11, 40});
+	roomList.push_back((roomNode){9, 100});
 
 	returnPathList[0] = 3;	// room
 	returnPathList[1] = 2;
@@ -143,7 +120,7 @@ void AbingtonMaze::setup() {
 	returnPathList[16] = 0;
 }
 
-mapNode AbingtonMaze::getPathNode(short pathIndex) {
+mapNode AbingtonMaze::getMapNode(short pathIndex) {
 	if (pathIndex > getPathLength()) {
 		Serial.print("!!!!!!!!!! Error!!! Path index outside bounds: ");
 		Serial.println(pathIndex);
@@ -164,7 +141,19 @@ mapNode AbingtonMaze::getPathNode(short pathIndex) {
 	return nodeList[nodeIndex];
 }
 
-mapNode AbingtonMaze::getReturnPathNode(short returnPathIndex) {
+mapNode AbingtonMaze::getMapNode(pathNode pNode) {
+	short nodeIndex = pNode.id;
+	if (nodeIndex > getNumNodes()) {
+		Serial.print(
+				"!!!!!!!!!! Error!!! Node id for path list outside bounds, id was: ");
+		Serial.println(pNode.id);
+		return nodeList[0];
+	}
+
+	return nodeList[nodeIndex];
+}
+
+mapNode AbingtonMaze::getReturnMapNode(short returnPathIndex) {
 	if (returnPathIndex > getReturnPathLength()) {
 		Serial.print("!!!!!!!!!! Error!!! Return path index outside bounds: ");
 		Serial.println(returnPathIndex);

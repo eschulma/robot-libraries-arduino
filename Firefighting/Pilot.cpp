@@ -19,8 +19,8 @@ Pilot::Pilot(Maze* inMaze, Planner* inPlanner, FireCheetah* inRobot, mazeHeading
 	planner->setup();
 }
 
-void Pilot::setStart(Planner* inPlanner, mazeHeading startHeading) {
-	planner = inPlanner;
+void Pilot::setStart(short startPathIndex, mazeHeading startHeading) {
+	planner->setCurrentPathIndex(startPathIndex);
 	heading = startHeading;
 }
 

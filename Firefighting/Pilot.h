@@ -47,7 +47,7 @@ class Pilot {
 		float nudgeToAlign(short wallDirection);
 		boolean fightFire();
 	public:
-		void setStart(Planner *inPlanner, mazeHeading startHeading);
+		void setStart(short startPathIndex, mazeHeading startHeading);
 		int setCourse();
 		int go();		
 		int headHome();

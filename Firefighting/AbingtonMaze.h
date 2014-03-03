@@ -19,12 +19,17 @@ class AbingtonMaze : public Maze {
 		short getPathLength();
 		short getReturnPathLength();
 
-		mapNode getPathNode(short pathIndex);
-		mapNode getReturnPathNode(short pathIndex);
+		std::list<pathNode>::iterator getPathStart() { return pathList.begin(); };
+
+		mapNode getMapNode(short pathIndex);
+		mapNode getMapNode(pathNode pNode);
+		mapNode getReturnMapNode(short pathIndex);
 
 	protected:
 		std::list<pathNode> pathList;
 		short returnPathList[MAZE_RETURN_PATH_LENGTH];
+
+	friend class Planner;
 };
 
 #endif

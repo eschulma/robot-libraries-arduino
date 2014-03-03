@@ -52,8 +52,8 @@ class Maze {
 	public:
 		virtual short getPathLength() = 0;
 		virtual short getReturnPathLength() = 0;
-		virtual mapNode getPathNode(short pathIndex) = 0;
-		virtual mapNode getReturnPathNode(short pathIndex) = 0;
+		virtual mapNode getMapNode(short pathIndex) = 0;
+		virtual mapNode getReturnMapNode(short pathIndex) = 0;
 
 		short getNumNodes() { return nodeList.size(); };
 		short getNumRooms() { return roomList.size(); };

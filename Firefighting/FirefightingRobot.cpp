@@ -9,7 +9,6 @@
 
 FirefightingRobot::FirefightingRobot() {
 	// TODO Auto-generated constructor stub
-
 }
 
 int FirefightingRobot::panServoForFire() {
@@ -96,7 +95,7 @@ int FirefightingRobot::panServoForFire(int startDegree, int endDegree) {
 
 boolean FirefightingRobot::isFire() {
 	float reading = getFireReading();
-	if(reading < fireThresholdReading) {
+	if(reading > fireThresholdReading) {
 		return true;
 	}
 	return false;
@@ -125,7 +124,7 @@ void FirefightingRobot::setFanServo(short degrees) {
 float FirefightingRobot::getFireReading() {
 	float reading = 0;
 	for(int i = 0; i < 5; i++) {
-		reading += (float)analogRead(fireSensorPin);
+		reading += fireSensor.getMaxTemperature();
 		delay(10);
 	}
 	reading /= 5.0;
