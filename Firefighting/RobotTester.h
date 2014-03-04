@@ -7,6 +7,13 @@
 #include <FireCheetah.h>
 #include <Pilot.h>
 
+#include <StandardCplusplus.h>
+#include <serstream>
+
+using namespace std;
+
+extern ohserialstream serial;
+
 class RobotTester {
 	private:
 		FireCheetah* robot;
@@ -33,8 +40,7 @@ void testWallFollowingPilot() {
 	while(1) {
 	    int returnCode = pilot.go();
 	    if(returnCode != 0) {
-	    	Serial.print("Pilot return code ");
-	    	Serial.println(returnCode);
+	    	serial << F("Pilot return code ") << returnCode << endl;
 	    	break;
 	    }
 	}
@@ -48,8 +54,7 @@ void testNudgeToAlign() {
 	// pilot.distanceToNext = 0; // smooth surfaces only!
 	// Node radius is 30
 	pilot.distanceToNext = 60;
-	Serial.print("Hallway width: ");
-	Serial.println(pilot.hallwayWidth);
+	serial << F("Hallway width: ") << pilot.hallwayWidth << endl;
 
 	float distance = pilot.nudgeToAlign(ROBOT_LEFT);
 	Serial.println(distance);
@@ -72,14 +77,13 @@ void testSegment() {
 	        returnCode = pilot.setCourse();
 	        if(returnCode == PILOT_FIRE_EXTINGUISHED) {
 	          robot->stop();
-	          Serial.println("Success!!!");
+	          serial << F("Success!!!") << endl;
 
 	          // put out the candle, now go back to start
 	          returnCode = pilot.headHome();
 	          if(returnCode < 0) {
 	  			robot->stop();
-	  			Serial.println("Unable to head home, return code was ");
-	          	Serial.print(returnCode);
+	  			serial << F("Unable to head home, return code was ") << returnCode << endl;
 	          	bContinue = false;
 	          }
 	          else {
@@ -87,28 +91,25 @@ void testSegment() {
 	  			returnCode = pilot.setCourse();
 	  			if(returnCode < 0) {
 	  				robot->stop();
-	  				Serial.print("pilot.setCourse returned code ");
-	  				Serial.println(returnCode);
+	  				serial << F("pilot.setCourse returned code ") << returnCode << endl;
 	  				bContinue = false;
 	  			}
 	          }
 	        }
 	        else if(returnCode == PILOT_RETURNED_HOME) {
 	          robot->stop();
-	          Serial.println("Back home!!!");
+	          serial << F("Back home!!!") << endl;
 	          bContinue = false;
 	        }
 	        else if(returnCode < 0) {
 	          robot->stop();
-	          Serial.print("pilot.setCourse returned code ");
-	          Serial.println(returnCode);
+	          serial << F("pilot.setCourse returned code ") << returnCode << endl;
 	          bContinue = false;
 	        }
 	      }
 	      else if(returnCode < 0) {
 	        robot->stop();
-	        Serial.print("pilot.go returned code ");
-	        Serial.println(returnCode);
+	        serial << F("pilot.go returned code ") << returnCode << endl;
 	        bContinue = false;
 	      }
   }
@@ -136,13 +137,13 @@ void testWallFollowing() {
 	// don't give up with stalls until we've reached maximum torque
 	if(robot->isStalled()) {
 		if(robot->getFollowWallCalculatedPWM() > robot->getMaxAllowedPWM()) {
-			Serial.println("We stalled!");
+			serial << F("We stalled!") << endl;
 			break;
 		}
 	}
 	float frontWallDistance = robot->getFrontWallDistance();
 	if((frontWallDistance > 0) && (frontWallDistance < stopFrontDistance)) {
-		Serial.println("Forward wall detected.");
+		serial << F("Forward wall detected.") << endl;
 		break;
 	}
     robot->followWall(wallSide);
@@ -151,14 +152,11 @@ void testWallFollowing() {
   float lossDistanceReading = robot->getSideWallDistanceReading(wallSide);
   robot->stop();
 
-  Serial.print("Lost wall at IR side wall distance ");
-  Serial.println(lossDistanceReading);
-  Serial.print("Front wall distance ");
-  Serial.println(robot->getFrontWallDistance());
+  serial << F("Lost wall at IR side wall distance ") << lossDistanceReading << endl;
+  serial << F("Front wall distance ") << robot->getFrontWallDistance() << endl;
 
   float val = robot->getCalculatedWallEnd(wallSide);
-  Serial.print("IR point along wall: ");
-  Serial.println(val);
+  serial << F("IR point along wall: ") << val << endl;
 }
 
 void testFireSensors() {
@@ -181,10 +179,7 @@ void testEncoders() {
 		leftTicks = robot->getOdometerValue(ROBOT_LEFT);
 		rightTicks = robot->getOdometerValue(ROBOT_RIGHT);
 
-		Serial.print("left ticks: ");
-		Serial.print(leftTicks);
-		Serial.print("     right ticks: ");
-		Serial.println(rightTicks);
+		serial << F("left ticks: ") << leftTicks << F("     right ticks: ") << rightTicks << endl;
 		delay(250);
 	}
 	robot->stop();
@@ -212,30 +207,21 @@ void testEncoderClicksPerRev() {
 	}
 	robot->stop();
 
-	Serial.print("left ticks: ");
-	Serial.print(ticks[0]);
-	Serial.print("     right ticks: ");
-	Serial.println(ticks[1]);
+	serial << F("left ticks: ") << ticks[0] << F("     right ticks: ") << ticks[1] << endl;
 
 	delay(500);
 	ticks[0] = robot->getOdometerValue(ROBOT_LEFT);
 	ticks[1] = robot->getOdometerValue(ROBOT_RIGHT);
-	Serial.println("");
-	Serial.println("1/2s after stop --");
-	Serial.print("left ticks: ");
-	Serial.print(ticks[0]);
-	Serial.print("     right ticks: ");
-	Serial.println(ticks[1]);
+
+	serial << endl << F("1/2s after stop --") << endl;
+	serial << F("left ticks: ") << ticks[0] << F("     right ticks: ") << ticks[1] << endl;
 
 	delay(2000);
 	ticks[0] = robot->getOdometerValue(ROBOT_LEFT);
 	ticks[1] = robot->getOdometerValue(ROBOT_RIGHT);
-	Serial.println("");
-	Serial.println("More than 2s after stop --");
-	Serial.print("left ticks: ");
-	Serial.print(ticks[0]);
-	Serial.print("     right ticks: ");
-	Serial.println(ticks[1]);
+
+	serial << endl << F("More than 2s after stop --") << endl;
+	serial << F("left ticks: ") << ticks[0] << F("     right ticks: ") << ticks[1] << endl;
 }
 
 void testCircling() {
@@ -247,7 +233,7 @@ void testTurning() {
 
   robot->turn(-PI/2.0);
   robot->stop();
-  Serial.println("Ticks right after stop: ");
+  serial << F("Ticks right after stop: ") << endl;
   printEncoderTicks();
 
   /* delay(2000);
@@ -298,23 +284,16 @@ void testMoving() {
 }
 
 void printPosition() {
-  Serial.print("Current position: ");
-  Serial.print(robot->odom.getX());
-  Serial.print("     ");
-  Serial.println(robot->odom.getY());
+  serial << F("Current position: ") << robot->odom.getX() << F("     ") << robot->odom.getY() << endl;
 
-  Serial.print("Current pose (degrees): ");
-  Serial.println(robot->odom.getHeading() * RAD_TO_DEG);
+  serial << F("Current pose (degrees): ") << robot->odom.getHeading() * RAD_TO_DEG << endl;
 }
 
 void printEncoderTicks() {
-	  long leftTicks = robot->getOdometerValue(ROBOT_LEFT);
-	  long rightTicks = robot->getOdometerValue(ROBOT_RIGHT);
+	long leftTicks = robot->getOdometerValue(ROBOT_LEFT);
+	long rightTicks = robot->getOdometerValue(ROBOT_RIGHT);
 
-	  Serial.print("left ticks: ");
-	  Serial.print(leftTicks);
-	  Serial.print("     right ticks: ");
-	  Serial.println(rightTicks);
+	serial << F("left ticks: ") << leftTicks << F("     right ticks: ") << rightTicks << endl;
 }
 
 void testGoToGoal() {
@@ -327,7 +306,7 @@ void testGoToGoal() {
   robot->stop();
   
   delay(2000);
-  Serial.println("\nAfter first goal: ");
+  serial << endl << F("After first goal: ") << endl;
   printPosition();
   printEncoderTicks();
 
@@ -339,7 +318,7 @@ void testGoToGoal() {
 void testFrontSonar() {
 	while(1) {
 		delay(250);
-		Serial.println(robot->getFrontWallDistance());
+		serial << robot->getFrontWallDistance() << endl;
 	}
 }
 
@@ -353,24 +332,15 @@ void testSonar() {
 		float distanceF = robot->sonar[SONAR_FRONT]->ping_cm();
 		delay(100);
 
-		Serial.print(distanceF);
-		Serial.print("  |  ");
-		Serial.print(distanceLF);
-		Serial.print("    ");
-		Serial.print(distanceLR);
-		Serial.print("  |  ");
-		Serial.print(distanceRF);
-		Serial.print("    ");
-		Serial.println(distanceRR);
+		serial << distanceF << F("  |  ") << distanceLF << F("    ")
+				<< distanceLR << F("  |  ") << distanceRF << F("    ") << distanceRR << endl;
 	}
 }
 
 void testIR() {
   while(1) {
     delay(250);
-    Serial.print(analogRead(WALL_LEFT_SENSOR_PIN));
-    Serial.print(" ");
-    Serial.println(analogRead(WALL_RIGHT_SENSOR_PIN));
+    serial << analogRead(WALL_LEFT_SENSOR_PIN) << F(" ") << analogRead(WALL_RIGHT_SENSOR_PIN) << endl;
   }
 }
 
@@ -384,12 +354,10 @@ void testAlignmentReadings() {
   while(1) {
     delay(500);
     float diff = robot->getMisalignment(ROBOT_LEFT);
-  	  Serial.print("distance diff: ");
-  	  Serial.println(diff);
+  	  serial << F("distance diff: ") << diff << endl;
     if(diff != 0) {
 	    float theta = atan2(diff, 7.7) * (180.0 / M_PI);
-  	  Serial.print("angle: ");
-  	  Serial.println(theta);
+  	  serial << F("angle: ") << theta << endl;
   	 }
   }
 }
@@ -412,9 +380,7 @@ void testStallCutoff() {
 		leftCurrent = analogRead(ARDUINO_MOTOR_SHIELD_LEFT_CURRENT_SENSE_PIN);
 		rightCurrent = analogRead(ARDUINO_MOTOR_SHIELD_RIGHT_CURRENT_SENSE_PIN);
 		if((leftCurrent > 100) || (rightCurrent > 100)) {
-			Serial.print(leftCurrent);
-			Serial.print(" ");
-			Serial.println(rightCurrent);
+			serial << leftCurrent << F(" ") << rightCurrent << endl;
 		}
 			
 		if(leftCurrent > maxCurrent) {
@@ -424,10 +390,9 @@ void testStallCutoff() {
 			maxCurrent = rightCurrent;
 		}
 	}
-	Serial.print("Max current reading: ");
-	Serial.println(maxCurrent);
+	serial << F("Max current reading: ") << maxCurrent << endl;
 	if(robot->isStalled()) {
-		Serial.println("We stalled.");
+		serial << F("We stalled.") << endl;
 	}
 	
 	robot->stop();
@@ -458,17 +423,14 @@ int testPanServoForFire() {
 			}
 		}
 		delay(100);
-		Serial.println(robot->getFireReading());
+		serial << robot->getFireReading() << endl;
 	}	
 	
 	if(fireFound) {		
-		Serial.print("Initial fire found at ");
-		Serial.println(degrees);
-		Serial.print("Fire reading: ");
-		Serial.println(robot->getFireReading());
+		serial << F("Initial fire found at ") << degrees << F("Fire reading: ") << robot->getFireReading() << endl;
 	}	
 	else {
-		Serial.println("No fire found!");
+		serial << F("No fire found!") << endl;
 	}
 	
 	short fireDegrees = degrees;
@@ -478,8 +440,7 @@ int testPanServoForFire() {
 		delay(500);
 		float reading = robot->getFireReading();
 		float minimumReading = reading;
-		Serial.print("Initial reading: ");
-		Serial.println(reading);
+		serial << F("Initial reading: ") << reading << endl;
 		do {
 			degrees -= 2;
 			robot->setFanServo(degrees);
@@ -495,8 +456,7 @@ int testPanServoForFire() {
 					minimumReading = reading;
 					fireDegrees = degrees;
 					
-					Serial.print("New minimum reading: ");
-					Serial.println(minimumReading);
+					serial << F("New minimum reading: ") << minimumReading << endl;
 				}
 			}
 			
@@ -504,14 +464,13 @@ int testPanServoForFire() {
 	// }
 	
 	if(fireFound) {
-		Serial.print("Fire found at ");
-		Serial.println(fireDegrees);
+		serial << F("Fire found at ") << fireDegrees << endl;
 		robot->setFanServo(fireDegrees);
 		delay(2000);
 		return fireDegrees;
 	}	
 	else {
-		Serial.println("No fire found.");
+		serial << F("No fire found.") << endl;
 	}
 	
 	robot->setFanServo(0);

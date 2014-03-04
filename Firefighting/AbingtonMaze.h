@@ -29,6 +29,8 @@ class AbingtonMaze : public Maze {
 		std::list<pathNode> pathList;
 		short returnPathList[MAZE_RETURN_PATH_LENGTH];
 
+		std::list<pathNode> room3NorthDoorList;
+
 	friend class Planner;
 };
 

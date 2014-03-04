@@ -10,6 +10,8 @@
 #include <Arduino.h>
 #include "AbingtonMaze.h"
 
+class Pilot;
+
 class Planner {
 	private:
 		boolean bReturningHome;	// must initialize to false
@@ -18,7 +20,7 @@ class Planner {
 
 	public:
 		mapNode getCurrentNode();
-		mapNode chooseNextNode();
+		mapNode chooseNextNode(Pilot* pilot);
 
 		void setCurrentPathIndex(short pathIndex);
 

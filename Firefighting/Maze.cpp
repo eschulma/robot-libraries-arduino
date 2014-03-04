@@ -3,6 +3,8 @@
 
 /**
  * All arrays must be allocated and assigned before calling this!
+ *
+ * To start, we assume every node is surrounded by walls.
  */
 void Maze::emptyMaze() {
 	for(int i = 0; i < getNumNodes(); i++) {

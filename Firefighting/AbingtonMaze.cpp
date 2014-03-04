@@ -1,21 +1,23 @@
 #include "AbingtonMaze.h"
 #include <Maze.h>
 
+using namespace std;
+
 void AbingtonMaze::setup() {
 
 	nodeRadius = 60;// cm; need large value to turn sensors on earlier (sigh)
 	hallwayWidth = 46;
 
 	// must be greater than number of nodes!!
-	nodeList.resize(12);
+	nodeList.resize(16);
 
-	// arrays must be allocated and assigned before calling this
+	// nodeList array must be allocated and assigned before calling this
 	emptyMaze();
 
 	// put in all the nodes and their neighbors, distances, etc.
 	nodeList[0].neighbor[MAZE_SOUTH] = 1;
 	nodeList[0].distToNeighbor[MAZE_SOUTH] = 77;
-	nodeList[0].neighbor[MAZE_EAST] = 5;
+	nodeList[0].neighbor[MAZE_EAST] = 14;	// we will only go from 14 to 0, not reverse
 
 	nodeList[1].neighbor[MAZE_NORTH] = 0;
 	nodeList[1].distToNeighbor[MAZE_NORTH] =
@@ -41,15 +43,17 @@ void AbingtonMaze::setup() {
 
 	nodeList[4].neighbor[MAZE_WEST] = 1;
 	nodeList[4].distToNeighbor[MAZE_WEST] = 46;	// hallway is wider here, but going short is OK
-	nodeList[4].neighbor[MAZE_NORTH] = 7;
+	nodeList[4].neighbor[MAZE_NORTH] = 7;	// Trinity variable door
 	nodeList[4].neighbor[MAZE_EAST] = 6;
 	nodeList[4].distToNeighbor[MAZE_NORTH] = 46;
 
-	nodeList[5].neighbor[MAZE_WEST] = 0;
+	nodeList[5].neighbor[MAZE_WEST] = 14;	// getting from 5 to 14 may be tricky, distance can vary
 	nodeList[5].neighbor[MAZE_SOUTH] = 6;
 
 	nodeList[6].neighbor[MAZE_WEST] = 4;
 	nodeList[6].neighbor[MAZE_NORTH] = 5;
+	nodeList[6].neighbor[MAZE_SOUTH] = 13;
+	nodeList[6].distToNeighbor[MAZE_SOUTH] = 91 + 5;
 
 	nodeList[7].isRoom = true;
 	nodeList[7].neighbor[MAZE_SOUTH] = 4;
@@ -65,15 +69,39 @@ void AbingtonMaze::setup() {
 	nodeList[9].neighbor[MAZE_WEST] = 8;
 	nodeList[9].distToNeighbor[MAZE_WEST] =
 			nodeList[8].distToNeighbor[MAZE_EAST];
+	nodeList[9].neighbor[MAZE_SOUTH] = 12;
 
 	nodeList[10].neighbor[MAZE_NORTH] = 8;
+	nodeList[10].neighbor[MAZE_EAST] = 12;	// Trinity variable door
 	nodeList[10].neighbor[MAZE_WEST] = 11;
 	nodeList[10].distToNeighbor[MAZE_WEST] = 46 + 5 + 5;
+	nodeList[10].distToNeighbor[MAZE_EAST] = 46 + 5 + 20;
 
 	nodeList[11].isRoom = true;
 	nodeList[11].neighbor[MAZE_EAST] = 10;
 	nodeList[11].distToNeighbor[MAZE_EAST] =
 			nodeList[10].distToNeighbor[MAZE_WEST];
+
+	nodeList[12].isRoom = true;
+	nodeList[12].neighbor[MAZE_NORTH] = 9;
+	nodeList[12].neighbor[MAZE_WEST] = 10;
+	nodeList[12].neighbor[MAZE_EAST] = 13;
+
+	nodeList[13].isRoom = true;
+	nodeList[13].neighbor[MAZE_WEST] = 12;	// we are never going from 13 to 12 so not putting in distance
+	nodeList[13].neighbor[MAZE_NORTH] = 6;
+	nodeList[13].distToNeighbor[MAZE_NORTH] =
+			nodeList[6].distToNeighbor[MAZE_SOUTH];
+
+	nodeList[14].neighbor[MAZE_EAST] = 5;
+	nodeList[14].neighbor[MAZE_SOUTH] = 15;
+	nodeList[14].distToNeighbor[MAZE_EAST] =
+			nodeList[5].distToNeighbor[MAZE_WEST];
+
+	nodeList[15].isRoom = true;
+	nodeList[15].neighbor[MAZE_NORTH] = 14;
+	nodeList[15].distToNeighbor[MAZE_NORTH] =
+			nodeList[14].distToNeighbor[MAZE_SOUTH];
 	// If we add more nodes, change resize command above!!!
 
 	// define path
@@ -100,6 +128,9 @@ void AbingtonMaze::setup() {
 	roomList.push_back((roomNode){3, 40});
 	roomList.push_back((roomNode){11, 40});
 	roomList.push_back((roomNode){9, 100});
+
+	// detour if room 3 has a door on the north rather than south
+	room3NorthDoorList.resize(4);	// this is optional
 
 	returnPathList[0] = 3;	// room
 	returnPathList[1] = 2;

@@ -29,7 +29,10 @@
 // note battery monitor not used now, this pin is in use
 #define BATTERY_MONITOR_PIN A15
 
+// For Mega, connect the SDA and SCL pins to 20 and 21
+
 // for encoders, A pin is yellow
+// TODO: Change left encoder pins
 #define ENCODER_LEFT_A_PIN 20
 #define ENCODER_LEFT_B_PIN 21
 #define ENCODER_RIGHT_A_PIN 18
@@ -53,8 +56,11 @@ class FireCheetah : public DifferentialDrive, public FirefightingRobot {
 		// sonar functions
 		float getSonarDistance(sonarLocation index);
 		float getMisalignment(short direction);
+
+		// fire
+		boolean bSetupFireSensor;
 	public:
-		FireCheetah();
+		FireCheetah(boolean setupFireSensor = true);
 		void setup();
 		void fightFire(int initDegrees);
 

@@ -52,6 +52,8 @@ class Pilot {
 		int go();		
 		int headHome();
 
+		boolean isObstaclePresent(mazeHeading heading, float maxDistance);
+
 		Pilot(Maze* inMaze, Planner *inPlanner, FireCheetah* inRobot, mazeHeading startHeading);
 
 #ifdef FIREFIGHTER_TEST

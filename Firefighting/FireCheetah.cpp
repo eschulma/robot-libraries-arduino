@@ -22,7 +22,7 @@ NewPing robotSonar[5] = { NewPing(SONAR_FORWARD_TRIGGER_PIN, SONAR_FORWARD_ECHO_
 																
 StallWatcher robotStallWatcher(&robotEncoder[0], &robotEncoder[1]);
 
-FireCheetah::FireCheetah() {
+FireCheetah::FireCheetah(boolean setupFireSensor) {
 	for(int i = 0; i < 2; i++) {
 		motor[i] = &robotMotor[i];
 		encoder[i] = &robotEncoder[i];
@@ -31,6 +31,8 @@ FireCheetah::FireCheetah() {
 	for(int j = 0; j < 5; j++) {
 		sonar[j] = &robotSonar[j];
 	}	
+
+	bSetupFireSensor = setupFireSensor;
 }
 
 void FireCheetah::setup() {
@@ -43,6 +45,11 @@ void FireCheetah::setup() {
 	}
 	// pinMode(fireSensorPin, INPUT);
 	// digitalWrite(fireSensorPin, HIGH);	// turns on internal pull-up resistor
+
+	// note: this is a blocking call! if fire sensor is not present, we'll hang here
+	if(bSetupFireSensor) {
+		fireSensor.setup();
+	}
 		
 	pinMode(fanControlPin, OUTPUT);
 	turnFanOn(false);

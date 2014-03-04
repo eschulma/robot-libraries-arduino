@@ -4,6 +4,13 @@
 #define PRE_ALIGN_DELAY 100
 #define TURN_DELAY 100
 
+#include <StandardCplusplus.h>
+#include <serstream>
+
+using namespace std;
+
+extern ohserialstream serial;
+
 Pilot::Pilot(Maze* inMaze, Planner* inPlanner, FireCheetah* inRobot, mazeHeading startHeading){
 	maze = inMaze;
 	planner = inPlanner;
@@ -25,18 +32,13 @@ void Pilot::setStart(short startPathIndex, mazeHeading startHeading) {
 }
 
 boolean Pilot::fightFire() {
-	Serial.println("Checking for fire!");
+	serial << F("Checking for fire!") << endl;
 	// save coords so we can return later
 	roomEntryX = robot->getX();
 	roomEntryY = robot->getY();
 	roomEntryHeading = robot->getHeading();
 
-	Serial.print("Room entry coordinates: ");
-	Serial.print(roomEntryX);
-	Serial.print(", ");
-	Serial.print(roomEntryY);
-	Serial.print(", ");
-	Serial.println(roomEntryHeading);
+	serial << F("Room entry coordinates: ") << roomEntryX << F(", ") << roomEntryY << F(", ") << roomEntryHeading << endl;
 
 	int degrees = robot->panServoForFire();
 	if(degrees != ROBOT_NO_FIRE_FOUND) {
@@ -54,10 +56,10 @@ boolean Pilot::fightFire() {
 int Pilot::setCourse() {
 	currentNode = planner->getCurrentNode();
 	if(bGoingHome) {
-		Serial.println("Heading home.");
+		serial << F("Heading home.") << endl;
 	}
 	else {
-		Serial.println("Looking for candle.");
+		serial << F("Looking for candle.") << endl;
 	}
 
 	if((bGoingHome) && (currentNode.id == 0)) {
@@ -120,16 +122,16 @@ int Pilot::setCourse() {
     	if(!bGoingHome) {
 			// we are at the last node..and failed to find the fire, presumably.
 			// we stop at second to last path index because setCourse includes the next node
-			Serial.println("Finished course, no joy.");
+    		serial << F("Finished course, no joy.") << endl;
 			return -1;
 		}
     	else {
-			Serial.println("!! Exceeded path limits on return home.");
+    		serial << F("!! Exceeded path limits on return home.") << endl;
 			return -1;
 		}
     }
 
-    nextNode = planner->chooseNextNode();
+    nextNode = planner->chooseNextNode(this);
 
     /*
 	Serial.println("");
@@ -142,10 +144,7 @@ int Pilot::setCourse() {
 		Serial.println(returnPathIndex);
 	} */
 
-	Serial.print("Current node id: ");
-	Serial.println(currentNode.id);
-	Serial.print("Next node id: ");
-	Serial.println(nextNode.id);
+    serial << F("Current node id: ") << currentNode.id << F("Next node id: ") << nextNode.id << endl;
 	
 	boolean doAlignLeft = false;
 	boolean doAlignRight = false;
@@ -163,15 +162,14 @@ int Pilot::setCourse() {
 	
 	if(nodeDistance < 0) {
 		// invalid path
-		Serial.print("Can't find neighbor path for current node ");
-		Serial.println(currentNode.id);
+		serial << F("Can't find neighbor path for current node ") << currentNode.id << endl;
 		return -2;
 	}
 	
 	// we can't set hallway width in the constructor, as maze is not ready yet
 	hallwayWidth = maze->getHallwayWidth();
 	if(hallwayWidth == 0) {
-		Serial.println("Hallway width was zero!!! Corrupted memory, exiting.");
+		serial << F("Hallway width was zero!!! Corrupted memory, exiting.") << endl;
 		return -2;
 	}
 	
@@ -232,8 +230,7 @@ int Pilot::setCourse() {
 //		}
 	else {
 		// this shouldn't happen; unless we add wall appearance as a node option
-		Serial.print("Can't find right check to use for next node, current node is ");
-		Serial.println(currentNode.id);
+		serial << F("Can't find right check to use for next node, current node is ") << currentNode.id << endl;
 		return -2;
 	}
 				
@@ -243,7 +240,7 @@ int Pilot::setCourse() {
 	
 	// for rooms, follow left wall in
 	if(nextNode.isRoom) {
-		Serial.println("Next node is a room.");
+		serial << F("Next node is a room.") << endl;
 		nodeCheck = PILOT_CHECK_DISTANCE;
 		followMethod = PILOT_FOLLOW_LEFT;
 
@@ -258,7 +255,7 @@ int Pilot::setCourse() {
 	
 	boolean useSonarAlignment = true;
 	if(useSonarAlignment) {
-		Serial.println("Using sonar alignment.");
+		serial << F("Using sonar alignment.") << endl;
 		if(followMethod == PILOT_FOLLOW_RIGHT) {
 			doAlignRight = true;
 		}
@@ -309,7 +306,7 @@ int Pilot::setCourse() {
 		}
 
 		if(currentNode.neighbor[heading] != MAZE_WALL) {
-			Serial.println("Moving forward to find wall.");
+			serial << F("Moving forward to find wall.") << endl;
 						
 			float dist = nudgeToAlign(wallSide);
 			distanceToNext -= dist;
@@ -354,19 +351,15 @@ int Pilot::setCourse() {
 	robot->resetCalculatedMovePWMs();
 	
 	if(!bGoingHome) {
-		Serial.print("For node ");
+		serial << F("For node ");
 	}
 	else {
-		Serial.print("For return node ");
+		serial << F("For return node ");
 	}
-	Serial.println(currentNode.id);
+	serial << currentNode.id << endl;
 
-	Serial.print("Follow method is ");
-	Serial.println(followMethod);
-	Serial.print("Check method is ");
-	Serial.println(nodeCheck);
-	Serial.print("Distance to next node is ");
-	Serial.println(distanceToNext);
+	serial << F("Follow method is ") << followMethod << endl << F("Check method is ") << nodeCheck << endl;
+	serial << F("Distance to next node is ") << distanceToNext << endl;
 	// Serial.print("Front stop distance is ");
 	// Serial.println(frontStopDistance);
 	
@@ -377,10 +370,7 @@ void Pilot::changeHeading(mazeHeading currentHeading, mazeHeading newHeading) {
 	int delta = (newHeading - currentHeading + 4) % 4;
 	
 	if(delta != 0) {
-		Serial.print("Changing heading from ");
-		Serial.print(currentHeading);
-		Serial.print(" to ");
-		Serial.println(newHeading);
+		serial << F("Changing heading from ") << currentHeading << F(" to ") << newHeading << endl;
 		
 		robot->stop();
 		delay(TURN_DELAY);
@@ -404,7 +394,7 @@ void Pilot::changeHeading(mazeHeading currentHeading, mazeHeading newHeading) {
 		delay(TURN_DELAY); // important! (was 1500)
 	}
 	else {
-		Serial.println("No heading change.");
+		serial << F("No heading change.") << endl;
 	}
 
 	heading = newHeading;
@@ -451,7 +441,7 @@ int Pilot::go() {
 	// straight distance check first
 	if(nodeCheck == PILOT_CHECK_DISTANCE) {
 		if((distanceTravelled + 3.0) > distanceToNext) {
-				Serial.println("PILOT_CHECK_DISTANCE triggered.");
+				serial << F("PILOT_CHECK_DISTANCE triggered.") << endl;
 				robot->stop();
 				delay(DEBUG_DELAY);
 				return 1;			
@@ -483,7 +473,7 @@ int Pilot::go() {
 					lastPingTime += 75;
 					if(wallDistance  < desiredWallDistance + bufferDistance) {
 						robot->stop();													
-						Serial.println("PILOT_CHECK_FORWARD triggered.");
+						serial << F("PILOT_CHECK_FORWARD triggered.") << endl;
 						delay(PRE_ALIGN_DELAY * 1.5);	// don't remove this! Can mess up alignment otherwise
 
 						// now we need to confirm that we didn't trigger based on a bad alignment
@@ -503,7 +493,7 @@ int Pilot::go() {
 						if(bAlignDone) {
 							wallDistance = robot->getFrontWallDistance();
 							if(wallDistance > desiredWallDistance + bufferDistance) {
-								Serial.println("Alignment gives cancellation of front wall check.");
+								serial << F("Alignment gives cancellation of front wall check.") << endl;
 								return 0;
 							}
 							else {
@@ -511,8 +501,7 @@ int Pilot::go() {
 							}
 						}
 							
-						Serial.print("Front wall distance ");
-						Serial.println(wallDistance);
+						serial << F("Front wall distance ") << wallDistance << endl;
 //						Serial.print("Desired walldistance ");
 //						Serial.println(desiredWallDistance);
 
@@ -521,8 +510,7 @@ int Pilot::go() {
 							wallDistance = desiredWallDistance;
 						}
 						
-						Serial.print("Moving ");
-						Serial.println(wallDistance - desiredWallDistance);
+						serial << F("Moving ") << (wallDistance - desiredWallDistance) << endl;
 						if(wallDistance > desiredWallDistance) {
 							robot->move(wallDistance - desiredWallDistance, 0);
 						}
@@ -549,7 +537,7 @@ int Pilot::go() {
 
 					lastPingTime += 50;
 					if(robot->isSideWallLost(wallSide)) {
-						Serial.println("PILOT_CHECK_LEFT/RIGHT triggered.");
+						serial << F("PILOT_CHECK_LEFT/RIGHT triggered.") << endl;
 
 						// see if we are way off in angle, and if so, try to align
 						robot->stop();
@@ -560,8 +548,7 @@ int Pilot::go() {
 						float theta = robot->getMisalignmentAngle(wallSide);
 						if((theta != ROBOT_NO_VALID_DATA) && (fabs(theta) > maxMisalignment)) {
 							// this should work for both right and left sides
-							Serial.print("Turning to find wall (degrees): ");
-							Serial.println(theta * RAD_TO_DEG);
+							serial << F("Turning to find wall (degrees): ") << (theta * RAD_TO_DEG) << endl;
 							robot->turn(theta);
 							robot->stop();
 
@@ -570,14 +557,13 @@ int Pilot::go() {
 
 						// if no turn, or turned but wall still lost, give up
 						if((!bTurnDone) || (robot->isSideWallLost(wallSide))) {
-							Serial.print("Lost wall: ");
-							Serial.println(wallSide);
+							serial << F("Lost wall: ") << wallSide << endl;
 
 							if(!bSwitchAfterWallCheck) {
 								nudgeForwardAfterWallLoss(wallSide);
 							}
 							else {
-								Serial.println("Switching to forward check.");
+								serial << F("Switching to forward check.") << endl;
 								followMethod = PILOT_FOLLOW_NONE;
 								nodeCheck = PILOT_CHECK_FORWARD;
 								return 0;
@@ -585,7 +571,7 @@ int Pilot::go() {
 							return 1;
 						}
 						else {
-							Serial.println("Re-found wall.");
+							serial << F("Re-found wall.") << endl;
 
 							// try to avoid endless loop
 							lastPingTime += 300;
@@ -615,8 +601,7 @@ int Pilot::go() {
 	}
 	else {
 		// error
-		Serial.print("Unknown follow method ");
-		Serial.println(followMethod);
+		serial << F("Unknown follow method ") << followMethod << endl;
 		return -2;
 	}
 	
@@ -652,17 +637,16 @@ void Pilot::nudgeForwardAfterWallLoss(short wallDirection) {
 	// did we make it past the wall?
 	delay(PRE_ALIGN_DELAY);
 	if(robot->isSideWallPresent(wallDirection)) {
-		Serial.println("Still seeing wall, mudging extra.");
+		serial << F("Still seeing wall, mudging extra.") << endl;
 		robot->move(10, 0);
 		robot->stop();
 	}
 	
-	Serial.print("Nudged forward ");
-	Serial.println(nudgeDistance);
+	serial << F("Nudged forward ") << nudgeDistance << endl;
 
 	// special for island room
 	if((nextNode.id == 4) && (heading == MAZE_WEST)) {
-		Serial.println("Aligning for island room (7).");
+		serial << F("Aligning for island room (7).") << endl;
 		delay(PRE_ALIGN_DELAY);
 		robot->align(ROBOT_LEFT);
 	}
@@ -673,7 +657,7 @@ void Pilot::nudgeForwardAfterWallLoss(short wallDirection) {
  *	to make sure that we are on course here.
  */
 float Pilot::nudgeToAlign(short wallDirection) {
-	Serial.println("nudgeToAlign called.");
+	serial << F("nudgeToAlign called.") << endl;
 
 	float distance = 0;
 
@@ -707,7 +691,7 @@ float Pilot::nudgeToAlign(short wallDirection) {
 				}
 				else {
 					// OK, we have a real problem here
-					Serial.println("Nudge to align, standard recoveries have failed.");
+					serial << F("Nudge to align, standard recoveries have failed.") << endl;
 					robot->resetStallWatcher();
 					int closeSide = robot->getSideClosestToForwardObstacle();
 					robot->backUp(10.0);
@@ -741,7 +725,7 @@ float Pilot::nudgeToAlign(short wallDirection) {
 		// (even this version takes 150ms)
 		if(robot->getDistanceFromMarkedPoint() > minTravelRequired) {
 			if(robot->isAlignmentPossible(wallDirection, hallwayWidth * 1.4)) {
-				Serial.println("Alignment possible.");
+				serial << F("Alignment possible.") << endl;
 				doLoop = false;
 				break;
 			}
@@ -757,13 +741,12 @@ float Pilot::nudgeToAlign(short wallDirection) {
 
 				// Yes, we are. So, figure out which side is closer to wall, and turn away
 				robot->stop();
-				Serial.println("nudgeToAlign has encountered a forward obstacle");
+				serial << F("nudgeToAlign has encountered a forward obstacle") << endl;
 				delay(500);
 
 				if(numProactiveRecovers < 5) {
 					angleTurned += robot->recover();
-					Serial.print("Recovery turned: ");
-					Serial.println(angleTurned);
+					serial << F("Recovery turned: ") << angleTurned << endl;
 
 					// so goal point is re-oriented properly
 					robot->setGoal(500, 0);
@@ -776,7 +759,7 @@ float Pilot::nudgeToAlign(short wallDirection) {
 					lastPingTime += 100;
 				}
 				else {
-					Serial.println("Nudge to align ignoring forward obstacle warnings.");
+					serial << F("Nudge to align ignoring forward obstacle warnings.") << endl;
 				}
 			} // if forward wall detected
 			else {
@@ -814,13 +797,69 @@ float Pilot::nudgeToAlign(short wallDirection) {
 }
 
 int Pilot::headHome() {
-	Serial.println("In head home.");
+	serial << F("In head home.") << endl;
 	short roomId = currentNode.id;
 
 	planner->returnHome(roomId);
 
 	// uh-oh, didn't find it
-	Serial.print("!!! Unable to find return path index for node id ");
-	Serial.println(roomId);
+	serial << F("!!! Unable to find return path index for node id ") << roomId << endl;
 	return -1;
+}
+
+/*
+ * See if there is an obstacle present in the given direction (heading)
+ * less than maxDistance away. We align first if possible, then use the appropriate
+ * sensor suite, without turning unless needed).
+ */
+boolean Pilot::isObstaclePresent(mazeHeading targetHeading, float maxDistance) {
+	serial << F("In isObstaclePresent for target heading ") << targetHeading << F(", maxDistance ") << maxDistance << endl;
+	boolean bReturn = true;
+
+	int delta = (targetHeading - heading + 4) % 4;
+
+	if(delta == 2) {
+		// it's in back of us, damn; turn so it's on the side
+		mazeHeading newHeading = (mazeHeading)((heading + 1) % 4);
+		changeHeading(heading, newHeading);
+
+		delta = (targetHeading - heading + 4) % 4;
+	}
+
+	// do alignment if possible, but not on the side we are looking for
+	mazeHeading wallHeading = (mazeHeading)((heading + 1) % 4);
+	if((wallHeading != targetHeading) && (currentNode.neighbor[wallHeading] == MAZE_WALL)) {
+		robot->align(ROBOT_RIGHT);
+	}
+	else {
+		wallHeading = (mazeHeading)((heading + 2) % 4);
+		if((wallHeading != targetHeading) && (currentNode.neighbor[wallHeading] == MAZE_WALL)) {
+			robot->align(ROBOT_LEFT);
+		}
+		else {
+			serial << F("No wall to align robot.") << endl;
+		}
+	}
+
+	float distance = 0;
+	if(delta == 0) {
+		// we are facing the right way
+		distance = robot->getFrontWallDistance();
+	}
+	else if(delta == 1) {
+		// it is on the right
+		distance = robot->getSideWallDistance(ROBOT_RIGHT);
+	}
+	else if(delta == 3) {
+		// it is on the left
+		distance = robot->getSideWallDistance(ROBOT_LEFT);
+	}
+
+	if((distance == NO_SONAR_FRONT_WALL_SEEN) || (distance == ROBOT_NO_VALID_DATA) || (distance > maxDistance)) {
+		bReturn = false;
+	}
+
+	serial << F("Obstacle detected: ") << bReturn << endl;
+
+	return bReturn;
 }

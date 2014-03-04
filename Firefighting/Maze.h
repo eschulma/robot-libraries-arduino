@@ -3,7 +3,7 @@
 #include <Arduino.h>
 
 // STL -- see http://andybrown.me.uk/wk/2011/01/15/the-standard-template-library-stl-for-avr-with-c-streams/
-#include <new.h>	// Arduino library that is needed for STL to work
+#include <StandardCplusplus.h>
 #include <iterator>
 #include <vector>
 #include <list>
@@ -37,6 +37,7 @@ enum mazeHeading {
 
 #define MAZE_WALL -1
 #define MAZE_OPEN_SPACE -2
+#define MAZE_UNCERTAIN -3
 
 class Maze {
 	private:
