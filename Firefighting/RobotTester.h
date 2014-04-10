@@ -120,7 +120,7 @@ void testSegment() {
 void testWallFollowing() {
   pilot.setCourse();
 
-  int wallSide = ROBOT_RIGHT;
+  int wallSide = ROBOT_LEFT;
   float stopFrontDistance = 23 - ((robot->getTrackWidth())/2.0);
 
   robot->initDesiredIRSensorReadings(wallSide);
@@ -231,7 +231,7 @@ void testCircling() {
 void testTurning() {
   robot->resetOdometers();
 
-  robot->turn(-PI/2.0);
+  robot->turn(PI/2.0);
   robot->stop();
   serial << F("Ticks right after stop: ") << endl;
   printEncoderTicks();
@@ -325,7 +325,7 @@ void testFrontSonar() {
 void testSonar() {
 	while(1) {
 		float distanceLF = robot->sonar[SONAR_LEFT_F]->ping_cm();
-		float distanceRF = robot->sonar[SONAR_RIGHT_R]->ping_cm();
+		float distanceRF = robot->sonar[SONAR_RIGHT_F]->ping_cm();
 		delay(100);
 		float distanceLR = robot->sonar[SONAR_LEFT_R]->ping_cm();
 		float distanceRR = robot->sonar[SONAR_RIGHT_R]->ping_cm();

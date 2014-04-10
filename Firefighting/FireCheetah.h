@@ -29,14 +29,13 @@
 // note battery monitor not used now, this pin is in use
 #define BATTERY_MONITOR_PIN A15
 
-// For Mega, connect the SDA and SCL pins to 20 and 21
+// Pins 20, 21: for Mega, connect the SDA and SCL pins to 20 and 21
 
-// for encoders, A pin is yellow
-// TODO: Change left encoder pins
-#define ENCODER_LEFT_A_PIN 20
-#define ENCODER_LEFT_B_PIN 21
-#define ENCODER_RIGHT_A_PIN 18
-#define ENCODER_RIGHT_B_PIN 19
+// for encoders, A pin is yellow. A lines should be on interrupt pin -- 2, 3, 18, 19, 20, 21 on Mega but many of these taken
+#define ENCODER_LEFT_A_PIN 18
+#define ENCODER_LEFT_B_PIN 30
+#define ENCODER_RIGHT_A_PIN 19
+#define ENCODER_RIGHT_B_PIN 31
 
 #define NO_SONAR_FRONT_WALL_SEEN 1000
 

@@ -77,7 +77,7 @@ void FireCheetah::setup() {
 	turnOneWheelOnly = true;
 	turnFudgeFactor = 1.0;
 
-	trackWidth = 17.7; // outer distance, measured
+	trackWidth = 17; // outer distance, measured
 	odom.setup(encoder, isMotorForward, wheelDiameter, (double)trackWidth);
 
 	moveMotorIndex = MOTOR_RIGHT;
